@@ -76,7 +76,7 @@ test('dock shapes stay centered and contained on phones and desktop', async ({ p
 
       for (const shape of headLabels) {
         await page.getByRole('button', { name: shape, exact: true }).click();
-        await expect(page.getByRole('button', { name: shape, exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByRole('button', { name: shape, pressed: true })).toBeVisible();
       }
     }
   }
