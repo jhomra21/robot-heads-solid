@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-test('published tarball loads and reacts in an external Solid 1 application', async ({ page }) => {
+test('consumer package installs the beta manifest from a version-independent tarball', () => {
+  const manifest = JSON.parse(readFileSync('e2e/consumer/node_modules/robot-heads-solid/package.json', 'utf8'));
+  expect(manifest.version).toBe('0.1.0-beta.0');
+  expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' });
+});
+
+test('packed tarball loads and reacts in an external Solid 1 application', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });

@@ -7,10 +7,10 @@ This is an independent Solid port of the MIT-licensed React project. The renderi
 ## Install
 
 ~~~sh
-bun add robot-heads-solid
+bun add robot-heads-solid@beta
 ~~~
 
-Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
+The current release is `0.1.0-beta.0` on the `beta` npm dist-tag. Use `@beta` explicitly while there is no stable `latest` release. Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
 
 ## Usage
 
