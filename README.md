@@ -10,7 +10,27 @@ This is an independent Solid port of the MIT-licensed React project. The renderi
 bun add robot-heads-solid@beta
 ~~~
 
-The next release is `0.1.0-beta.1`; the published `beta` tag remains on `0.1.0-beta.0` until this version is released. Use `@beta` explicitly while there is no stable `latest` release. Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
+The `beta` tag currently resolves to `0.1.0-beta.1`; `latest` remains on `0.1.0-beta.0` until a stable release. Use `@beta` explicitly. Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
+
+## Releases
+
+Releases publish from an annotated Git tag matching the version in the root `package.json` (for example, `vX.Y.Z-beta.N`). The tag must point to the `main` commit that introduced that package version. The release workflow runs anti-slop rule regression, lint, typecheck, build, browser E2E, and packed-consumer checks before publishing the exact verified tarball with npm provenance. Beta versions publish to the `beta` dist-tag; stable versions publish to `latest`. Versions are immutable and are never republished.
+All package releases share one concurrency group, and the workflow requires a release version to be strictly newer than the version already on its target npm dist-tag. If tags are pushed close together, an older queued release fails rather than moving the channel backward.
+
+One-time maintainer setup:
+
+1. In npm package settings for `robot-heads-solid`, configure **Trusted Publishers** for GitHub Actions with repository owner `jhomra21`, repository `robot-heads-solid`, workflow filename `release.yml`, and GitHub environment `npm-publish`. Do not create or store an npm token.
+2. In GitHub repository settings, create the `npm-publish` environment. Optionally require a reviewer to approve publication; do not add environment secrets.
+3. Ensure GitHub Actions is allowed to run and protect the `v*` tag namespace so only release maintainers can create release tags.
+
+For each release, merge the versioned package change to `main`, then create and push its matching tag:
+
+~~~sh
+git tag -a vX.Y.Z-beta.N -m "vX.Y.Z-beta.N"
+git push origin vX.Y.Z-beta.N
+~~~
+
+Do not run `npm publish` locally. If npm Trusted Publishing is not configured or the workflow binding does not match, the publish job will fail without a token fallback.
 
 ## Usage
 
