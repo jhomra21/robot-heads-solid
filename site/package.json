@@ -1,0 +1,24 @@
+{
+  "name": "robot-heads-solid-site",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "preview": "vite preview",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.15"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@types/node": "^24.13.3",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.149.0"
+  }
+}

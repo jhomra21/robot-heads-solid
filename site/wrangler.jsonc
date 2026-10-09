@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "robot-heads-solid",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-06",
+  "assets": { "not_found_handling": "single-page-application" },
+  "observability": { "enabled": true }
+}

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test tools/oxlint/anti-slop/tests/geometry-vocabulary.test.ts
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun run build
+      - run: cd site && bun run typecheck
+      - run: cd site && bun run build
+      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright test
+      - run: bun run e2e:consumer
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: solid-playground-e2e
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
