@@ -22,4 +22,6 @@ export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvas
   floorShadow?: boolean;
   /** 0–1. Offsets blinks and glances across a row of heads. */
   seed?: number;
+  /** React-compatible className alias; Solid's class prop also works. */
+  className?: string;
 }
