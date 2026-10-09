@@ -1,0 +1,67 @@
+{
+  "name": "robot-heads-solid",
+  "version": "0.1.0",
+  "description": "Animated TV-headed robot avatars for Solid, drawn with Canvas 2D.",
+  "keywords": [
+    "solid",
+    "solidjs",
+    "robot",
+    "avatar",
+    "agent",
+    "animation",
+    "canvas",
+    "3d",
+    "led"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhomra21/robot-heads-solid.git"
+  },
+  "homepage": "https://github.com/jhomra21/robot-heads-solid#readme",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "workspaces": [
+    "site"
+  ],
+  "scripts": {
+    "dev": "cd site && bun run dev",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "build:site": "bun run build && cd site && bun run build",
+    "check": "bun run typecheck && bun run build && cd site && bun run typecheck && bun run build",
+    "deploy": "bun run build:site && cd site && bun run deploy",
+    "prepublishOnly": "bun run check",
+    "e2e": "playwright test"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.9.0 || ^2.0.0-0"
+  },
+  "devDependencies": {
+    "solid-js": "^1.9.15",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14",
+    "vite-plugin-dts": "^4.5.0",
+    "typescript": "^5.9.3",
+    "@playwright/test": "^1.56.0"
+  }
+}
