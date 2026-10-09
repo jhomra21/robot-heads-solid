@@ -3,8 +3,6 @@ import type { JSX } from 'solid-js';
 import { RobotHead, robotHeadShapes, robotHeadStates } from 'robot-heads-solid';
 import type { RobotHeadShape, RobotHeadState } from 'robot-heads-solid';
 
-const q = new URLSearchParams(location.search);
-
 const shapeLabels: Record<RobotHeadShape, string> = {
   rectangle: 'Rectangle', square: 'Square', circle: 'Circle', hexagon: 'Hexagon',
 };
@@ -173,7 +171,7 @@ function ThemeToggle(props: { theme: Theme; onToggle: () => void }) {
 interface PropLine {
   key: string;
   name: string;
-  value: string | number;
+  value: string | number | boolean;
   on: boolean;
 }
 
@@ -196,7 +194,7 @@ function PropTokens(props: { line: PropLine }) {
       ) : (
         <>
           <span class="tok-punct">{'{'}</span>
-          <span class="tok-number">{props.line.value}</span>
+          <span class="tok-number">{String(props.line.value)}</span>
           <span class="tok-punct">{'}'}</span>
         </>
       )}
@@ -245,27 +243,58 @@ function useCopy() {
 }
 
 export default function App(): JSX.Element {
+  const query = () => new URLSearchParams(location.search);
+
   const [state, setState] = createSignal<RobotHeadState>(
-    robotHeadStates.find((value) => value === q.get('state')) ?? 'idle',
+    robotHeadStates.find((value) => value === query().get('state')) ?? 'idle',
   );
 
   const [shape, setShapeState] = createSignal<RobotHeadShape>(
-    robotHeadShapes.find((value) => value === q.get('shape')) ?? 'rectangle',
+    robotHeadShapes.find((value) => value === query().get('shape')) ?? 'rectangle',
   );
 
   const [colors, setColors] = createSignal<Colors>(DEFAULTS);
   const [speed, setSpeed] = createSignal(1);
-  const [paused, setPaused] = createSignal(q.has('paused'));
+  const [paused, setPaused] = createSignal(query().has('paused') && query().get('paused') !== 'false');
   const [copied, copy] = useCopy();
   const [theme, toggleTheme] = useTheme();
   const size = useStageSize();
 
+  const updateURL = (key: string, value: string | null) => {
+    const url = new URL(location.href);
+
+    if (value === null) url.searchParams.delete(key);
+    else url.searchParams.set(key, value);
+
+    history.pushState(null, '', url);
+  };
+
   const setShape = (next: RobotHeadShape) => {
     setShapeState(next);
-    const url = new URL(location.href);
-    url.searchParams.set('shape', next);
-    history.replaceState(null, '', url);
+    updateURL('shape', next);
   };
+
+  const setSelectedState = (next: RobotHeadState) => {
+    setState(next);
+    updateURL('state', next);
+  };
+
+  const setPlayback = (next: boolean) => {
+    setPaused(next);
+    updateURL('paused', next ? '' : null);
+  };
+
+  onMount(() => {
+    const restore = () => {
+      const params = query();
+      setState(robotHeadStates.find((value) => value === params.get('state')) ?? 'idle');
+      setShapeState(robotHeadShapes.find((value) => value === params.get('shape')) ?? 'rectangle');
+      setPaused(params.has('paused') && params.get('paused') !== 'false');
+    };
+
+    window.addEventListener('popstate', restore);
+    onCleanup(() => window.removeEventListener('popstate', restore));
+  });
 
   const changed = createMemo(() =>
     colors().color !== DEFAULTS.color ||
@@ -281,6 +310,7 @@ export default function App(): JSX.Element {
     { key: 'trimColor', name: 'trimColor', value: colors().trimColor, on: colors().trimColor !== DEFAULTS.trimColor },
     { key: 'screenColor', name: 'screenColor', value: colors().screenColor, on: colors().screenColor !== DEFAULTS.screenColor },
     { key: 'speed', name: 'speed', value: speed(), on: speed() !== 1 },
+    { key: 'paused', name: 'paused', value: true, on: paused() },
   ]);
 
   const snippet = createMemo(() =>
@@ -333,7 +363,7 @@ export default function App(): JSX.Element {
         <div class="control">
           <div class="control-head">
             <span class="control-label">Speed</span>
-            <button class="text-button" onClick={() => setPaused(!paused())}>
+            <button class="text-button" onClick={() => setPlayback(!paused())}>
               {paused() ? 'Play' : 'Pause'}
             </button>
           </div>
@@ -350,7 +380,7 @@ export default function App(): JSX.Element {
             <span class="control-actions">
               <button class="text-button reset" aria-hidden={!changed()}
                 tabIndex={changed() ? 0 : -1}
-                onClick={() => { setColors(DEFAULTS); setSpeed(1); setPaused(false); }}>Reset</button>
+                onClick={() => { setColors(DEFAULTS); setSpeed(1); setPlayback(false); }}>Reset</button>
               <button class="text-button" onClick={() => copy('snippet', snippet())}>
                 {copied() === 'snippet' ? 'Copied' : 'Copy'}
               </button>
@@ -362,7 +392,7 @@ export default function App(): JSX.Element {
 
       <nav class="states" aria-label="State">
         {robotHeadStates.map((value) => (
-          <button class="state" aria-pressed={value === state()} onClick={() => setState(value)}>
+          <button class="state" aria-pressed={value === state()} onClick={() => setSelectedState(value)}>
             <span class="state-head">
               <RobotHead shape={shape()} state={value} size={120} paused={paused()}
                 speed={speed()} interactive={false} aria-hidden={true} {...colors()} />

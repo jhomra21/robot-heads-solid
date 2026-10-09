@@ -1,12 +1,21 @@
 import type { JSX } from 'solid-js';
 
-export type RobotHeadState =
-  | 'idle' | 'thinking' | 'searching' | 'listening' | 'speaking'
-  | 'working' | 'happy' | 'error' | 'sleeping';
+const states = [
+  'idle', 'thinking', 'searching', 'listening', 'speaking',
+  'working', 'happy', 'error', 'sleeping',
+] as const;
+
+export type RobotHeadState = typeof states[number];
+
+export const robotHeadStates: RobotHeadState[] = [...states];
 
 export type RobotHeadModel = 'tv';
 
-export type RobotHeadShape = 'rectangle' | 'square' | 'circle' | 'hexagon';
+const geometries = ['rectangle', 'square', 'circle', 'hexagon'] as const;
+
+export type RobotHeadShape = typeof geometries[number];
+
+export const robotHeadShapes: RobotHeadShape[] = [...geometries];
 
 /** Canvas attributes are forwarded to the underlying canvas. */
 export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvasElement>, 'color'> {

@@ -11,6 +11,7 @@ node_modules
 test-results
 playwright-report
 e2e/consumer/bun.lock
+e2e/consumer/hydration.html
 dist
 dist-ssr
 *.local

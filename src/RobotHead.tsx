@@ -1,5 +1,6 @@
 import { createEffect, createSignal, createUniqueId, onCleanup, onMount, splitProps } from 'solid-js';
 import type { JSX } from 'solid-js';
+import { robotHeadShapes, robotHeadStates } from './types';
 import type { RobotHeadProps, RobotHeadShape, RobotHeadState } from './types';
 import { getShape } from './tv/geometry';
 import { RobotSim, restPose } from './tv/sim';
@@ -7,12 +8,6 @@ import { RobotRenderer, type Palette } from './tv/render';
 import { linear } from './tv/light';
 import { parseColor } from './color';
 import { subscribe, pointer } from './ticker';
-
-export const robotHeadShapes: RobotHeadShape[] = ['rectangle', 'square', 'circle', 'hexagon'];
-
-export const robotHeadStates: RobotHeadState[] = [
-  'idle', 'thinking', 'searching', 'listening', 'speaking', 'working', 'happy', 'error', 'sleeping',
-];
 
 function hashSeed(id: string): number {
   let h = 2166136261;
@@ -69,15 +64,24 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
   let canvas!: HTMLCanvasElement;
   let renderer: RobotRenderer | undefined;
 
+  const size = () => Number.isFinite(local.size) && (local.size ?? 0) > 0
+    ? Math.max(32, Math.min(local.size!, 1024)) : 160;
+
+  const speed = () => Number.isFinite(local.speed) && (local.speed ?? -1) >= 0
+    ? Math.min(local.speed!, 8) : 1;
+
   const sim = new RobotSim(
-    Math.min(1, Math.max(0, local.seed ?? hashSeed(id))),
+    Number.isFinite(local.seed) ? Math.min(1, Math.max(0, local.seed!)) : hashSeed(id),
     validState(local.state),
   );
 
   const [reduceMotion, setReduceMotion] = createSignal(false);
+  const [visible, setVisible] = createSignal(true);
   onMount(() => {
-    if (typeof matchMedia === 'undefined') return;
-    const query = matchMedia('(prefers-reduced-motion: reduce)');
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    observer.observe(canvas);
+    onCleanup(() => observer.disconnect());
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReduceMotion(query.matches);
     const changed = () => setReduceMotion(query.matches);
     query.addEventListener('change', changed);
@@ -87,7 +91,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
   createEffect(() => {
     const state = validState(local.state);
     const shape = getShape(validShape(local.shape));
-    const size = local.size ?? 160;
+    const dimension = size();
 
     const colors = palette(
       local.color ?? '#2b49a3',
@@ -95,17 +99,17 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
       local.screenColor ?? '#e8f2ff',
     );
 
-    const speed = local.speed ?? 1;
+    const rate = speed();
     const interactive = local.interactive ?? true;
     const floorShadow = local.floorShadow ?? true;
-    const still = (local.paused ?? false) || !(speed > 0) || reduceMotion();
+    const still = (local.paused ?? false) || !(rate > 0) || reduceMotion();
 
     sim.setState(state);
 
     const paint = (animated: boolean) => {
       if (!canvas) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const pixels = Math.round(size * dpr);
+      const pixels = Math.round(dimension * dpr);
 
       if (canvas.width !== pixels || canvas.height !== pixels) {
         canvas.width = pixels;
@@ -124,8 +128,8 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
       );
     };
 
-    if (still) {
-      paint(false);
+    if (still || !visible()) {
+      if (visible()) paint(false);
 
       return;
     }
@@ -140,7 +144,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
         sim.pointer = null;
       }
 
-      sim.update(dt * speed);
+      sim.update(dt * rate);
       paint(true);
     });
 
@@ -148,7 +152,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
   });
 
   const handleClick: JSX.EventHandler<HTMLCanvasElement, MouseEvent> = (event) => {
-    if ((local.interactive ?? true) && !(local.paused ?? false) && (local.speed ?? 1) > 0 && !reduceMotion()) {
+    if ((local.interactive ?? true) && !(local.paused ?? false) && speed() > 0 && !reduceMotion()) {
       sim.poke();
     }
 
@@ -175,10 +179,10 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
       aria-label={local['aria-label'] ?? `Robot, ${validState(local.state)}`}
       class={local.class ?? local.className}
       style={isStyleText(local.style)
-        ? `width:${local.size ?? 160}px;height:${local.size ?? 160}px;display:block;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
+        ? `width:${size()}px;height:${size()}px;display:block;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
         : {
-            width: `${local.size ?? 160}px`,
-            height: `${local.size ?? 160}px`,
+            width: `${size()}px`,
+            height: `${size()}px`,
             display: 'block',
             cursor: local.interactive === false ? undefined : 'pointer',
             ...local.style,

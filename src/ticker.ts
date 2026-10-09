@@ -15,6 +15,21 @@ let last = 0;
 
 let listening = false;
 
+function away() {
+  pointer.x = NaN;
+  pointer.y = NaN;
+}
+
+function moved(e: PointerEvent) {
+  pointer.x = e.clientX;
+  pointer.y = e.clientY;
+}
+
+function visibility() {
+  if (document.hidden) stop();
+  else if (subscribers.size) start();
+}
+
 function loop(now: number) {
   frame = 0;
   const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
@@ -39,21 +54,20 @@ function listen() {
   if (listening || typeof document === 'undefined') return;
   listening = true;
 
-  const away = () => {
-    pointer.x = NaN;
-    pointer.y = NaN;
-  };
-
-  document.addEventListener('pointermove', (e) => {
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-  }, { passive: true });
+  document.addEventListener('pointermove', moved, { passive: true });
   document.addEventListener('pointerleave', away);
   window.addEventListener('blur', away);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stop();
-    else if (subscribers.size) start();
-  });
+  document.addEventListener('visibilitychange', visibility);
+}
+
+function unlisten() {
+  if (!listening) return;
+  listening = false;
+  away();
+  document.removeEventListener('pointermove', moved);
+  document.removeEventListener('pointerleave', away);
+  window.removeEventListener('blur', away);
+  document.removeEventListener('visibilitychange', visibility);
 }
 
 export function subscribe(fn: Tick): () => void {
@@ -64,6 +78,9 @@ export function subscribe(fn: Tick): () => void {
   return () => {
     subscribers.delete(fn);
 
-    if (!subscribers.size) stop();
+    if (!subscribers.size) {
+      stop();
+      unlisten();
+    }
   };
 }

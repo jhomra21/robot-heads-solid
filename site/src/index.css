@@ -108,7 +108,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 .caption p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
 
 /* ── controls: a column of quiet labels ── */
-.controls { grid-column: 3; grid-row: 2; align-self: start; padding-top: 64px; z-index: 1; display: flex; flex-direction: column; gap: 30px; min-height: 0; }
+.controls { grid-column: 3; grid-row: 2; align-self: stretch; padding-top: clamp(16px, 4vh, 64px); z-index: 1; display: flex; flex-direction: column; gap: 30px; min-height: 0; overflow-y: auto; }
 .control { display: grid; gap: 12px; }
 .control-head { display: flex; align-items: baseline; justify-content: space-between; }
 .control-label { font-size: 13px; color: var(--soft); }
@@ -211,7 +211,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   .masthead { min-width: 0; flex-wrap: wrap; gap: 8px 20px; }
   .masthead-end { min-width: 0; flex-wrap: wrap; gap: 4px 12px; }
   .install { flex-wrap: wrap; gap: 4px 8px; }
-  .controls { align-self: stretch; }
+  .controls { align-self: stretch; padding-top: 0; overflow-y: visible; }
   .states { flex-wrap: wrap; row-gap: 20px; }
   .state { flex-basis: 30%; }
   .dock { left: 50%; top: auto; bottom: 16px; transform: translateX(-50%); flex-direction: row; align-items: flex-end; }

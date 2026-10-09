@@ -127,11 +127,13 @@ export class RobotSim {
   }
 
   update(dt: number) {
-    if (!(dt > 0)) return;
+    if (!Number.isFinite(dt) || !(dt > 0)) return;
     /* small steps keep the springs stable on a slow frame */
-    const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+    // The ticker caps real frame time at 0.1s before applying speed (up to 8x).
+    const elapsed = Math.min(dt, 0.8);
+    const steps = Math.max(1, Math.ceil(elapsed / (1 / 120)));
 
-    for (let i = 0; i < steps; i++) this.step(dt / steps);
+    for (let i = 0; i < steps; i++) this.step(elapsed / steps);
   }
 
   private stepJump(dt: number) {
@@ -308,6 +310,8 @@ export class RobotSim {
         }
 
         break;
+      default:
+        this.state satisfies never;
     }
 
     return { yaw, pitch, roll, bob, lookX, lookY, freq, damping, shake };
@@ -413,6 +417,11 @@ export function restPose(state: RobotHeadState): RobotPose {
     case 'happy': return { ...base, pitch: 0.08, roll: 0.06 };
     case 'error': return { ...base, pitch: -0.06, roll: -0.05 };
     case 'sleeping': return { ...base, pitch: -0.34, roll: 0.13, yaw: 0.06 };
-    default: return { ...base, yaw: -0.18, pitch: 0.04, roll: 0.03 };
+    case 'idle': return { ...base, yaw: -0.18, pitch: 0.04, roll: 0.03 };
+    case 'speaking': return base;
+    default:
+      state satisfies never;
+
+      return base;
   }
 }

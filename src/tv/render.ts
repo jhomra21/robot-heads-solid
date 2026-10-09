@@ -320,14 +320,45 @@ function grainPattern(ctx: CanvasRenderingContext2D): CanvasPattern | null {
 /* bakes depend only on the shape and the size, so every head on the page shares them */
 const bakes = new Map<string, { front: HTMLCanvasElement; back: HTMLCanvasElement; glass: HTMLCanvasElement }>();
 
+const MAX_BAKE_BYTES = 24 * 1024 * 1024;
+
+const MAX_BAKES = 12;
+
+let bakeBytes = 0;
+
+/** Diagnostics for the bounded, shared texture cache. */
+export function bakeCacheStats() {
+  return { entries: bakes.size, bytes: bakeBytes };
+}
+
+function bytesOf(b: { front: HTMLCanvasElement; back: HTMLCanvasElement; glass: HTMLCanvasElement }) {
+  return 4 * (b.front.width * b.front.height + b.back.width * b.back.height + b.glass.width * b.glass.height);
+}
+
 function bakesFor(shape: Shape, unit: number) {
   const key = `${shape.name}:${Math.round(unit)}`;
   let b = bakes.get(key);
 
-  if (!b) {
-    const sc = screenOf(shape);
-    b = { front: bakeFront(shape, unit), back: bakeBack(shape, unit), glass: bakeGlass(sc.hx * 2 * unit, sc.hy * 2 * unit) };
+  if (b) {
+    bakes.delete(key);
     bakes.set(key, b);
+
+    return b;
+  }
+
+  const sc = screenOf(shape);
+  b = { front: bakeFront(shape, unit), back: bakeBack(shape, unit), glass: bakeGlass(sc.hx * 2 * unit, sc.hy * 2 * unit) };
+  const bytes = bytesOf(b);
+
+  while (bakes.size && (bakes.size >= MAX_BAKES || bakeBytes + bytes > MAX_BAKE_BYTES)) {
+    const oldest = bakes.keys().next().value!;
+    bakeBytes -= bytesOf(bakes.get(oldest)!);
+    bakes.delete(oldest);
+  }
+
+  if (bytes <= MAX_BAKE_BYTES) {
+    bakes.set(key, b);
+    bakeBytes += bytes;
   }
 
   return b;

@@ -67,7 +67,7 @@ The component forwards ordinary Solid canvas attributes, event handlers, styling
 | 'floorShadow' | 'boolean' | true |
 | 'seed' | 'number' (0–1) | generated per instance |
 
-Animations use one shared requestAnimationFrame loop and stop when the page is hidden. Disabled or reduced motion draws the resting pose. Interactive heads follow the pointer and respond to clicks. The canvas defaults to 'role="img"' and an accessible state label.
+Animations use one shared requestAnimationFrame loop and stop when the page is hidden or the canvas leaves the viewport. Disabled or reduced motion draws the resting pose. Invalid sizes and speeds fall back to defaults; positive sizes are clamped to 32–1024px and speeds to 8× to keep rendering and simulation work bounded. Interactive heads follow the pointer and respond to clicks. The canvas defaults to 'role="img"' and an accessible state label. Node SSR imports resolve to server-compiled ESM/CJS builds; the canvas is rendered as markup and drawn once mounted on the client.
 
 ## Development
 
@@ -76,10 +76,10 @@ bun install
 bun run dev        # Solid playground
 bun run lint       # Oxlint: anti-slop rules and classic complexity (max 20)
 bun run typecheck
-bun run build      # library ES/CJS bundles and declarations
+bun run build      # browser and SSR ES/CJS bundles and declarations
 bun run check      # lint, library and playground checks
 bun run e2e        # playground browser regressions, including all 36 shape/state combinations
-bun run e2e:consumer # build/package/typecheck/browser-test an independent Solid 1 consumer
+bun run e2e:consumer # packed Solid 1 consumer: typecheck, browser and Node ESM/CJS SSR
 ~~~
 
 The playground lives in 'site/'. The library is in 'src/'. To build the Cloudflare Worker playground, run 'bun run deploy' after configuring your Cloudflare account.

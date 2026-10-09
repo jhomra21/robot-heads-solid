@@ -97,6 +97,7 @@ test('appearance, pause, animation, speed, pointer, and click actually update pi
   data.paused = { start: p0, end: p1 };
   expect(p0.hash, 'paused canvas changed').toBe(p1.hash);
   await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.locator('main.stage canvas').scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
   const playing0 = await pixels(page);
   await page.waitForTimeout(450);
@@ -107,10 +108,12 @@ test('appearance, pause, animation, speed, pointer, and click actually update pi
 
   await page.getByRole('button', { name: '0.5×' }).click();
   await expect(page.getByRole('button', { name: '0.5×' })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('main.stage canvas').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   const slow = await pixels(page);
   await page.getByRole('button', { name: '2×' }).click();
   await expect(page.getByRole('button', { name: '2×' })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('main.stage canvas').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
   const fast = await pixels(page);
   data.speed = { slow, fast };
@@ -122,6 +125,7 @@ test('appearance, pause, animation, speed, pointer, and click actually update pi
   await page.locator('nav[aria-label="State"]').getByRole('button', { name: 'Idle', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const canvas = page.locator('main.stage canvas');
+  await canvas.scrollIntoViewIfNeeded();
   const box = (await canvas.boundingBox())!;
   await page.mouse.move(box.x - 100, box.y + box.height / 2);
   await page.waitForTimeout(200);
