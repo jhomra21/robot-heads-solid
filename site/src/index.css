@@ -184,11 +184,13 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 }
 .dock-icon {
   position: absolute; left: 0; top: 50%; width: 52px; height: 52px;
-  transform: translateY(-50%) scale(var(--s)); transform-origin: left center;
+  transform: translateY(calc(-50% - 4px)) scale(var(--s)); transform-origin: left center;
   opacity: .45; transition: transform .2s var(--ease), opacity .2s;
 }
 /* the head leaves room in its canvas for hops, so the canvas overflows its slot */
 .dock-icon canvas { width: 72px !important; height: 72px !important; margin: -10px; }
+/* The wide rectangle reads larger than the other three at the same canvas size. */
+.dock-item[aria-label='Rectangle'] .dock-icon canvas { transform: scale(.92); }
 .dock-item:hover { --s: 1.4; }
 .dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover) { --s: 1.15; }
 .dock-item:hover .dock-icon, .dock-item[aria-pressed='true'] .dock-icon { opacity: 1; }
@@ -216,7 +218,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   .state { flex-basis: 30%; }
   .dock { left: 50%; top: auto; bottom: 16px; transform: translateX(-50%); flex-direction: row; align-items: flex-end; }
   .dock-item { width: calc(52px * var(--s)); height: 52px; transition: width .2s var(--ease); }
-  .dock-icon { left: 50%; top: auto; bottom: 0; transform: translateX(-50%) scale(var(--s)); transform-origin: center bottom; }
+  .dock-icon { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, calc(-50% - 4px)) scale(var(--s)); transform-origin: center center; }
   .dock-tip { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

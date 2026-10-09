@@ -418,7 +418,7 @@ export function restPose(state: RobotHeadState): RobotPose {
     case 'error': return { ...base, pitch: -0.06, roll: -0.05 };
     case 'sleeping': return { ...base, pitch: -0.34, roll: 0.13, yaw: 0.06 };
     case 'idle': return { ...base, yaw: -0.18, pitch: 0.04, roll: 0.03 };
-    case 'speaking': return base;
+    case 'speaking': return { ...base, yaw: -0.18, pitch: 0.04, roll: 0.03 };
     default:
       state satisfies never;
 

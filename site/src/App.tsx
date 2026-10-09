@@ -60,7 +60,14 @@ function useStageSize() {
   const measure = () => {
     const w = window.innerWidth, h = window.innerHeight;
 
-    if (w < 900) return Math.max(240, Math.min(w - 32, 400));
+    if (w < 900) {
+      // On short narrow screens the wrapped masthead and fixed dock share
+      // the first viewport with the preview hint.
+      const shortScreen = w <= 480 && h <= 700 ? h - 392 : 400;
+
+      return Math.max(240, Math.min(w - 32, shortScreen, 400));
+    }
+
     const room = Math.min(w - 2 * (300 + 40 + 40), h - 300);
 
     return Math.round(Math.max(260, Math.min(room, 520)));
