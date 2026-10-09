@@ -31,7 +31,8 @@ test('shape, state, paint, appearance, and pause controls work in Solid', async 
   await expect(page.getByRole('button', { name: 'Play' })).toBeVisible();
   await page.getByRole('button', { name: 'Reset' }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
-  await expect(page.locator('aside.controls .code')).not.toContainText('color="#c8372d"');
+  await expect(page.locator('aside.controls .code .code-prop').nth(2)).toHaveAttribute('data-open', 'false');
+  await expect(page.getByRole('button', { name: 'Shell: Cobalt' })).toHaveAttribute('aria-pressed', 'true');
 
   await page.screenshot({ path: 'test-results/robot-heads-solid.png', fullPage: true });
 });
