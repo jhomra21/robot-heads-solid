@@ -21,16 +21,21 @@ export interface Material {
 
 const n3 = (x: number, y: number, z: number): V3 => {
   const l = Math.hypot(x, y, z);
+
   return [x / l, y / l, z / l];
 };
 
 export const KEY = n3(-0.5, -0.78, 0.62);
+
 const FILL = n3(0.85, 0.15, 0.5);
+
 const BACK = n3(0.55, -0.55, -0.62);
+
 const HALF = n3(KEY[0], KEY[1], KEY[2] + 1);
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+
   return t * t * (3 - 2 * t);
 };
 
@@ -41,10 +46,12 @@ function environment(rx: number, ry: number, rz: number): number {
   const softbox = 1.1 * smooth(0.42, 0.78, up) * smooth(-0.9, -0.2, rz - 0.6 * Math.abs(rx));
   const window = 2.6 * smooth(0.86, 0.97, rx * KEY[0] + ry * KEY[1] + rz * KEY[2]);
   const strip = 0.5 * smooth(0.6, 0.85, -rx) * smooth(-0.35, 0.05, up) * (1 - smooth(0.2, 0.5, up));
+
   return horizon + softbox + window + strip;
 }
 
 const toLinear = (c: number) => Math.pow(c / 255, 2.2);
+
 export function linear(rgb: [number, number, number]): V3 {
   return [toLinear(rgb[0]), toLinear(rgb[1]), toLinear(rgb[2])];
 }
@@ -52,6 +59,7 @@ export function linear(rgb: [number, number, number]): V3 {
 /* ACES-like curve, then sRGB */
 function display(x: number): number {
   const t = (x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14);
+
   return Math.round(255 * Math.pow(Math.min(1, Math.max(0, t)), 1 / 2.2));
 }
 
@@ -71,6 +79,7 @@ export function radiance(m: Material, nx: number, ny: number, nz: number, out: V
   const back = Math.max(0, nx * BACK[0] + ny * BACK[1] + nz * BACK[2]);
   const rim = m.rim * back * back * Math.pow(1 - ndv, 1.6);
   const diffuse = 0.05 + 0.1 * sky + 1.25 * key + 0.16 * fill;
+
   for (let i = 0; i < 3; i++) {
     const a = m.albedo[i];
     const tint = 1 - m.metal + m.metal * a * 2.2;
@@ -78,6 +87,7 @@ export function radiance(m: Material, nx: number, ny: number, nz: number, out: V
     const rimTint = i === 0 ? 0.62 : i === 1 ? 0.78 : 1;
     out[i] = a * diffuse * (1 - fres * 0.6) + (env + spec) * tint + rim * rimTint * (0.35 + a);
   }
+
   return out;
 }
 

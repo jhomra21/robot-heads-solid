@@ -5,6 +5,7 @@ export type RobotHeadState =
   | 'working' | 'happy' | 'error' | 'sleeping';
 
 export type RobotHeadModel = 'tv';
+
 export type RobotHeadShape = 'rectangle' | 'square' | 'circle' | 'hexagon';
 
 /** Canvas attributes are forwarded to the underlying canvas. */

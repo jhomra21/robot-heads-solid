@@ -22,16 +22,19 @@ class Spring {
 
 function rng(seed: number) {
   let a = Math.floor(seed * 4294967295) >>> 0 || 1;
+
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
     let t = a;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
 const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 
 interface Jump {
@@ -108,6 +111,7 @@ export class RobotSim {
     this.since = 0;
     this.nextLook = 0;
     this.nextHop = this.time + (s === 'happy' ? 0.2 : 3 + this.random() * 4);
+
     if (s === 'happy') this.hop(0.22, 1);
   }
 
@@ -126,33 +130,58 @@ export class RobotSim {
     if (!(dt > 0)) return;
     /* small steps keep the springs stable on a slow frame */
     const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+
     for (let i = 0; i < steps; i++) this.step(dt / steps);
   }
 
-  private step(dt: number) {
-    this.time += dt;
-    this.since += dt;
-    this.age += dt;
-    this.switched += dt;
-    const t = this.time;
+  private stepJump(dt: number) {
+    let lift = 0, spin = 0, lean = 0;
+    let squashTarget = 0;
+    const j = this.jump;
     const rand = this.random;
 
-    const shown: RobotHeadState = t < this.reactUntil ? 'happy' : this.state;
-    if (shown !== this.shown) {
-      this.previous = this.shown;
-      this.shown = shown;
-      this.switched = 0;
+    if (j) {
+      j.age += dt;
+
+      if (j.age < CROUCH) {
+        squashTarget = 0.14;
+      } else {
+        const ap = (j.age - CROUCH) / j.air;
+
+        if (ap < 1) {
+          if (ap < 0.06 && this.squash.x > 0.05) {
+            /* leaving the ground: spring up into a stretch, the antenna lagging */
+            this.squash.v = -2.6;
+            this.antZ.v -= 3;
+          }
+
+          lift = 4 * j.height * ap * (1 - ap);
+          spin = j.spin * Math.PI * 2 * easeInOut(clamp(ap * 1.08, 0, 1));
+          lean = j.lean * Math.sin(ap * Math.PI);
+          squashTarget = ap < 0.5 ? -0.05 : 0;
+        } else if (!j.landed) {
+          j.landed = true;
+          this.squash.v += 3.2;
+          this.antX.v += (rand() < 0.5 ? -1 : 1) * (2.5 + rand() * 2);
+          this.antZ.v += 3.5;
+        } else if (j.age - CROUCH - j.air > 0.35) {
+          this.jump = null;
+        }
+      }
     }
 
-    /* the state's targets */
-    let yaw = 0, pitch = 0, roll = 0, sway = 0, bob = Math.sin(t * 1.9) * 0.008;
-    let lookX = 0, lookY = 0;
-    let freq = 1.3, damping = 0.62;
-    let shake = 0;
-    const p = this.pointer;
-    const follows = p && (this.state === 'idle' || this.state === 'listening' || this.state === 'happy' || this.state === 'speaking');
+    this.squash.step(squashTarget, dt, 3.2, 0.32);
 
+    return { lift, spin, lean };
+  }
+
+  private hopWithChance(height: number, chance: number) {
+    this.hop(height, this.random() < chance ? (this.random() < 0.5 ? 1 : -1) : 0);
+  }
+
+  private updateLookAt(t: number) {
     if (t > this.nextLook) {
+      const rand = this.random;
       this.lookAt = {
         yaw: (rand() - 0.5) * 0.75,
         pitch: (rand() - 0.5) * 0.24,
@@ -163,6 +192,14 @@ export class RobotSim {
       this.lookAt.y = rand() < 0.3 ? -1 : rand() < 0.2 ? 1 : 0;
       this.nextLook = t + 1.4 + rand() * 2.6;
     }
+  }
+
+  private stateTargets(t: number) {
+    const rand = this.random;
+    let yaw = 0, pitch = 0, roll = 0, bob = Math.sin(t * 1.9) * 0.008;
+    let lookX = 0, lookY = 0;
+    let freq = 1.3, damping = 0.62;
+    let shake = 0;
 
     switch (this.state) {
       case 'idle':
@@ -171,16 +208,19 @@ export class RobotSim {
         roll = -this.lookAt.yaw * 0.16;
         lookX = this.lookAt.x;
         lookY = this.lookAt.y;
+
         if (t > this.nextHop) {
-          this.hop(0.15 + rand() * 0.07, rand() < 0.35 ? (rand() < 0.5 ? 1 : -1) : 0);
+          this.hopWithChance(0.15 + rand() * 0.07, 0.35);
           this.nextHop = t + 7 + rand() * 7;
         }
+
         break;
       case 'thinking': {
         if (t > this.nextSide) {
           this.face.side = -this.face.side;
           this.nextSide = t + 3 + rand() * 2;
         }
+
         const s = this.face.side;
         yaw = 0.24 * s + Math.sin(t * 0.9) * 0.05;
         pitch = 0.17 + Math.sin(t * 1.3) * 0.03;
@@ -188,6 +228,7 @@ export class RobotSim {
         freq = 0.9;
         break;
       }
+
       case 'searching': {
         const ph = t * 1.6;
         yaw = Math.sin(ph) * 0.55;
@@ -199,16 +240,20 @@ export class RobotSim {
         damping = 0.8;
         break;
       }
+
       case 'listening': {
         yaw = -0.14;
         pitch = 0.02;
         roll = 0.17;
+
         if (t > this.nextNod) {
           this.pitch.v -= 0.9;
           this.nextNod = t + 2 + rand() * 2.5;
         }
+
         break;
       }
+
       case 'speaking':
         yaw = Math.sin(t * 0.7) * 0.12;
         pitch = 0.03 + Math.sin(t * 6.3) * 0.025 * (0.5 + 0.5 * Math.sin(t * 2.1));
@@ -221,19 +266,23 @@ export class RobotSim {
         pitch = -0.16;
         roll = Math.sin(t * 0.5) * 0.04;
         bob += Math.abs(Math.sin(t * 7)) * 0.012;
+
         if (t > this.nextHop) {
           this.hop(0.2, rand() < 0.5 ? 1 : -1);
           this.nextHop = t + 5 + rand() * 3;
         }
+
         break;
       case 'happy':
         yaw = Math.sin(t * 2.2) * 0.18;
         roll = Math.sin(t * 4.4) * 0.12;
         pitch = 0.08;
+
         if (t > this.nextHop) {
-          this.hop(0.17, rand() < 0.34 ? (rand() < 0.5 ? 1 : -1) : 0);
+          this.hopWithChance(0.17, 0.34);
           this.nextHop = t + 1.05 + rand() * 0.4;
         }
+
         break;
       case 'error': {
         /* a shake of the head every couple of seconds */
@@ -244,6 +293,7 @@ export class RobotSim {
         freq = 1.6;
         break;
       }
+
       case 'sleeping':
         pitch = -0.34;
         roll = 0.13;
@@ -251,12 +301,40 @@ export class RobotSim {
         bob = Math.sin(t * 1.15) * 0.016;
         freq = 0.55;
         damping = 0.9;
+
         if (t > this.nextNod) {
           this.pitch.v -= 0.5;
           this.nextNod = t + 5 + rand() * 4;
         }
+
         break;
     }
+
+    return { yaw, pitch, roll, bob, lookX, lookY, freq, damping, shake };
+  }
+
+  private step(dt: number) {
+    this.time += dt;
+    this.since += dt;
+    this.age += dt;
+    this.switched += dt;
+    const t = this.time;
+    const rand = this.random;
+
+    const shown: RobotHeadState = t < this.reactUntil ? 'happy' : this.state;
+
+    if (shown !== this.shown) {
+      this.previous = this.shown;
+      this.shown = shown;
+      this.switched = 0;
+    }
+
+    /* the state's targets */
+    this.updateLookAt(t);
+    let { yaw, pitch, roll, bob, lookX, lookY, freq, damping, shake } = this.stateTargets(t);
+    const sway = 0;
+    const p = this.pointer;
+    const follows = p && (this.state === 'idle' || this.state === 'listening' || this.state === 'happy' || this.state === 'speaking');
 
     if (follows && p) {
       yaw = clamp(p.x / 260, -1, 1) * 0.55;
@@ -272,47 +350,22 @@ export class RobotSim {
     this.sway.step(sway, dt, 1.2, 0.7);
 
     /* the jump */
-    let lift = 0, spin = 0, lean = 0;
-    let squashTarget = 0;
-    const j = this.jump;
-    if (j) {
-      j.age += dt;
-      if (j.age < CROUCH) {
-        squashTarget = 0.14;
-      } else {
-        const ap = (j.age - CROUCH) / j.air;
-        if (ap < 1) {
-          if (ap < 0.06 && this.squash.x > 0.05) {
-            /* leaving the ground: spring up into a stretch, the antenna lagging */
-            this.squash.v = -2.6;
-            this.antZ.v -= 3;
-          }
-          lift = 4 * j.height * ap * (1 - ap);
-          spin = j.spin * Math.PI * 2 * easeInOut(clamp(ap * 1.08, 0, 1));
-          lean = j.lean * Math.sin(ap * Math.PI);
-          squashTarget = ap < 0.5 ? -0.05 : 0;
-        } else if (!j.landed) {
-          j.landed = true;
-          this.squash.v += 3.2;
-          this.antX.v += (rand() < 0.5 ? -1 : 1) * (2.5 + rand() * 2);
-          this.antZ.v += 3.5;
-        } else if (j.age - CROUCH - j.air > 0.35) {
-          this.jump = null;
-        }
-      }
-    }
-    this.squash.step(squashTarget, dt, 3.2, 0.32);
+    const { lift, spin, lean } = this.stepJump(dt);
 
     /* blinks */
     if (t > this.nextBlink) {
       this.blinkAge = 0;
       this.nextBlink = t + 2.2 + rand() * 3.5;
+
       if (rand() < 0.2) this.nextBlink = t + 0.35;
     }
+
     let blink = 0;
+
     if (this.blinkAge >= 0) {
       this.blinkAge += dt;
       blink = Math.sin(clamp(this.blinkAge / 0.17, 0, 1) * Math.PI);
+
       if (this.blinkAge > 0.17) this.blinkAge = -1;
     }
 
@@ -351,6 +404,7 @@ export class RobotSim {
 /** The still pose of a state, for reduced motion and paused heads. */
 export function restPose(state: RobotHeadState): RobotPose {
   const base: RobotPose = { yaw: 0, pitch: 0, roll: 0, x: 0, lift: 0, sx: 1, sy: 1, antennaX: 0, antennaZ: 0 };
+
   switch (state) {
     case 'thinking': return { ...base, yaw: 0.24, pitch: 0.17, roll: -0.13 };
     case 'searching': return { ...base, yaw: 0.3, roll: -0.04 };

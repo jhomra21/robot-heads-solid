@@ -52,6 +52,7 @@ export function rotation(yaw: number, pitch: number, roll: number): number[] {
   const cr = Math.cos(roll), sr = Math.sin(roll);
   /* Yaw · Pitch */
   const a = [cy, sy * sp, sy * cp, 0, cp, -sp, -sy, cy * sp, cy * cp];
+
   /* Roll · that */
   return [
     cr * a[0] - sr * a[3], cr * a[1] - sr * a[4], cr * a[2] - sr * a[5],
@@ -66,6 +67,7 @@ export function rotate(m: number[], x: number, y: number, z: number): V3 {
 
 const norm = (x: number, y: number, z: number): V3 => {
   const l = Math.hypot(x, y, z) || 1;
+
   return [x / l, y / l, z / l];
 };
 
@@ -117,18 +119,23 @@ function makeShape(
   const pts = centres
     .map(([x, y]) => ({ x, y, t: Math.atan2(y, x) }))
     .sort((a, b) => a.t - b.t);
+
   const n = pts.length;
   /* each edge's outward normal angle */
   const edge: number[] = [];
+
   for (let i = 0; i < n; i++) {
     const a = pts[i], b = pts[(i + 1) % n];
     edge.push(Math.atan2(-(b.x - a.x), b.y - a.y));
   }
+
   const corners: Corner[] = pts.map((p, i) => {
     if (n === 1) return { x: p.x, y: p.y, a0: -Math.PI, a1: Math.PI };
     let a0 = edge[(i - 1 + n) % n];
     let a1 = edge[i];
+
     while (a1 < a0) a1 += TAU;
+
     return { x: p.x, y: p.y, a0, a1 };
   });
 
@@ -136,18 +143,23 @@ function makeShape(
     if (n === 1) return Math.hypot(x - pts[0].x, y - pts[0].y);
     let d = Infinity;
     let inside = true;
+
     for (let i = 0; i < n; i++) {
       const a = pts[i], b = pts[(i + 1) % n];
       const ex = b.x - a.x, ey = b.y - a.y;
       const px = x - a.x, py = y - a.y;
       const t = Math.max(0, Math.min(1, (px * ex + py * ey) / (ex * ex + ey * ey)));
       d = Math.min(d, Math.hypot(px - ex * t, py - ey * t));
+
       /* clockwise on screen: the inside is to the right of each edge */
       if (ex * py - ey * px < 0) inside = false;
     }
+
     return inside ? -d : d;
   };
+
   const sd = (x: number, y: number, inset: number) => sdPoly(x, y) - (r - inset);
+
   const path = (ctx: CanvasRenderingContext2D | Path2D, inset: number) => {
     const rr = Math.max(0.0005, r - inset);
     corners.forEach((c, i) => {
@@ -156,29 +168,38 @@ function makeShape(
     });
     ctx.closePath();
   };
+
   let hx = 0, hy = 0;
+
   for (const p of pts) {
     hx = Math.max(hx, Math.abs(p.x) + r);
     hy = Math.max(hy, Math.abs(p.y) + r);
   }
+
   /* the ears go where the outline crosses their height */
   let lo = 0, hi = hx + 0.1;
+
   for (let i = 0; i < 40; i++) {
     const mid = (lo + hi) / 2;
+
     if (sd(mid, HEAD.earY, 0) < 0) lo = mid;
     else hi = mid;
   }
+
   /* a screw sits in the corner whose arc faces its way, at `inward` in from the outline */
   const place = (dirs: number[], inward: number) =>
     dirs.map((d, i): [number, number, number] => {
       const a = (d * Math.PI) / 180;
       const c = corners.find((k) => [a, a + TAU, a - TAU].some((x) => x >= k.a0 - 1e-6 && x <= k.a1 + 1e-6)) ?? corners[0];
+
       return [c.x + Math.cos(a) * (r - inward), c.y + Math.sin(a) * (r - inward), 0.5 + i * 0.9];
     });
+
   /* the LEDs are sized so the face (14 cells wide, 10 tall) fills the same
      share of every screen, leaving each the rectangle's breathing room */
   const gw = 2 * (hx - INSET.glass), gh = 2 * (hy - INSET.glass);
   const pitch = Math.min((FACE_SHARE * gw) / 14, (0.65 * gh) / 10);
+
   return {
     name, r, depth, corners, hx, hy, pitch,
     earX: lo - 0.008,
@@ -197,6 +218,7 @@ const hexCentres = (a: number): Array<[number, number]> =>
 const FACE_SHARE = 0.6;
 
 const CORNERS = [45, 135];
+
 const BACK_CORNERS = [-135, -45, 45, 135];
 
 const SHAPES: Record<RobotHeadShape, () => Shape> = {
@@ -207,12 +229,15 @@ const SHAPES: Record<RobotHeadShape, () => Shape> = {
 };
 
 const shapeCache = new Map<RobotHeadShape, Shape>();
+
 export function getShape(name: RobotHeadShape): Shape {
   let s = shapeCache.get(name);
+
   if (!s) {
     s = (SHAPES[name] ?? SHAPES.rectangle)();
     shapeCache.set(name, s);
   }
+
   return s;
 }
 
@@ -220,14 +245,18 @@ export function getShape(name: RobotHeadShape): Shape {
 
 function finish(pos: number[], quads: number[], vn: number[]): Mesh {
   const normals = new Float32Array((quads.length / 4) * 3);
+
   for (let q = 0; q < quads.length / 4; q++) {
     let x = 0, y = 0, z = 0;
+
     for (let k = 0; k < 4; k++) {
       const i = quads[q * 4 + k] * 3;
       x += vn[i]; y += vn[i + 1]; z += vn[i + 2];
     }
+
     normals.set(norm(x, y, z), q * 3);
   }
+
   return { pos: new Float32Array(pos), quads: new Uint16Array(quads), normals };
 }
 
@@ -235,12 +264,14 @@ function finish(pos: number[], quads: number[], vn: number[]): Mesh {
 function stitch(rings: number, samples: number, closed = true): number[] {
   const quads: number[] = [];
   const span = closed ? samples : samples - 1;
+
   for (let k = 0; k < rings - 1; k++) {
     for (let j = 0; j < span; j++) {
       const j2 = (j + 1) % samples;
       quads.push(k * samples + j, k * samples + j2, (k + 1) * samples + j2, (k + 1) * samples + j);
     }
   }
+
   return quads;
 }
 
@@ -249,33 +280,41 @@ export function buildBody(shape: Shape, bevelSteps = 10): Mesh {
   const R = shape.r, b = HEAD.bevel, zf = shape.depth / 2;
   /* the outline: each sample's corner centre and its outward normal */
   const outline: Array<[number, number, number, number]> = [];
+
   for (const c of shape.corners) {
     const sweep = c.a1 - c.a0;
     const steps = Math.max(2, Math.ceil((sweep / (Math.PI / 2)) * 14));
     /* a full circle closes on itself, so its last sample would repeat the first */
     const last = sweep >= TAU - 1e-6 ? steps - 1 : steps;
+
     for (let i = 0; i <= last; i++) {
       const a = c.a0 + (i / steps) * sweep;
       outline.push([c.x, c.y, Math.cos(a), Math.sin(a)]);
     }
   }
+
   /* the profile through the depth: back cap → back roll → side → front roll → front cap */
   const profile: Array<[number, number, number]> = [];
+
   for (let i = bevelSteps; i >= 0; i--) {
     const t = (i / bevelSteps) * (Math.PI / 2);
     profile.push([-zf + b - b * Math.sin(t), b * (1 - Math.cos(t)), -t]);
   }
+
   for (let i = 0; i <= bevelSteps; i++) {
     const t = (i / bevelSteps) * (Math.PI / 2);
     profile.push([zf - b + b * Math.sin(t), b * (1 - Math.cos(t)), t]);
   }
+
   const pos: number[] = [], vn: number[] = [];
+
   for (const [z, inset, t] of profile) {
     for (const [cx, cy, nx, ny] of outline) {
       pos.push(cx + (R - inset) * nx, cy + (R - inset) * ny, z);
       vn.push(nx * Math.cos(t), ny * Math.cos(t), Math.sin(t));
     }
   }
+
   return finish(pos, stitch(profile.length, outline.length), vn);
 }
 
@@ -288,6 +327,7 @@ export function buildLathe(profile: Array<[number, number]>, origin: V3, axis: V
   const e1: V3 = Math.abs(axis[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
   const e2 = norm(axis[1] * e1[2] - axis[2] * e1[1], axis[2] * e1[0] - axis[0] * e1[2], axis[0] * e1[1] - axis[1] * e1[0]);
   const pos: number[] = [], vn: number[] = [];
+
   for (let k = 0; k < profile.length; k++) {
     const [r, t] = profile[k];
     const prev = profile[Math.max(0, k - 1)], next = profile[Math.min(profile.length - 1, k + 1)];
@@ -295,6 +335,7 @@ export function buildLathe(profile: Array<[number, number]>, origin: V3, axis: V
     const dr = next[0] - prev[0], dt = next[1] - prev[1];
     const l = Math.hypot(dr, dt) || 1;
     const nr = dt / l, na = -dr / l;
+
     for (let j = 0; j < segments; j++) {
       const a = (j / segments) * TAU;
       const rx = Math.cos(a) * e1[0] + Math.sin(a) * e2[0];
@@ -304,6 +345,7 @@ export function buildLathe(profile: Array<[number, number]>, origin: V3, axis: V
       vn.push(rx * nr + axis[0] * na, ry * nr + axis[1] * na, rz * nr + axis[2] * na);
     }
   }
+
   return finish(pos, stitch(profile.length, segments), vn);
 }
 
@@ -326,8 +368,10 @@ export interface HeadMeshes {
 }
 
 const meshCache = new Map<RobotHeadShape, HeadMeshes>();
+
 export function headMeshes(shape: Shape): HeadMeshes {
   let m = meshCache.get(shape.name);
+
   if (!m) {
     m = {
       body: buildBody(shape),
@@ -337,5 +381,6 @@ export function headMeshes(shape: Shape): HeadMeshes {
     };
     meshCache.set(shape.name, m);
   }
+
   return m;
 }

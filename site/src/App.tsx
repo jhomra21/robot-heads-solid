@@ -4,9 +4,11 @@ import { RobotHead, robotHeadShapes, robotHeadStates } from 'robot-heads-solid';
 import type { RobotHeadShape, RobotHeadState } from 'robot-heads-solid';
 
 const q = new URLSearchParams(location.search);
+
 const shapeLabels: Record<RobotHeadShape, string> = {
   rectangle: 'Rectangle', square: 'Square', circle: 'Circle', hexagon: 'Hexagon',
 };
+
 const stateHints: Record<RobotHeadState, string> = {
   idle: 'Looks around, blinks, hops now and then.',
   thinking: 'Eyes up, dots pulsing, head tilted to one side.',
@@ -24,9 +26,11 @@ interface Colors {
   trimColor: string;
   screenColor: string;
 }
+
 const DEFAULTS: Colors = {
   color: '#2b49a3', trimColor: '#93a6c8', screenColor: '#e8f2ff',
 };
+
 const SWATCHES: Record<keyof Colors, Array<[string, string]>> = {
   color: [
     ['Cobalt', '#2b49a3'], ['Tomato', '#c8372d'], ['Tangerine', '#e2762a'],
@@ -43,25 +47,34 @@ const SWATCHES: Record<keyof Colors, Array<[string, string]>> = {
     ['Amber', '#ffc46b'], ['Neon', '#ff8fd0'],
   ],
 };
+
 const ROW_LABELS: Record<keyof Colors, string> = {
   color: 'Shell', trimColor: 'Trim', screenColor: 'Screen',
 };
+
+const COLOR_KEYS: Array<keyof Colors> = ['color', 'trimColor', 'screenColor'];
+
 const SPEEDS = [0.5, 1, 1.5, 2];
+
 const title = (value: string) => value[0].toUpperCase() + value.slice(1);
 
 function useStageSize() {
   const measure = () => {
     const w = window.innerWidth, h = window.innerHeight;
+
     if (w < 900) return Math.max(240, Math.min(w - 32, 400));
     const room = Math.min(w - 2 * (300 + 40 + 40), h - 300);
+
     return Math.round(Math.max(260, Math.min(room, 520)));
   };
+
   const [size, setSize] = createSignal(measure());
   onMount(() => {
     const update = () => setSize(measure());
     window.addEventListener('resize', update);
     onCleanup(() => window.removeEventListener('resize', update));
   });
+
   return size;
 }
 
@@ -93,6 +106,7 @@ function Swatches(props: {
   onChange: (value: string) => void;
 }) {
   const known = () => SWATCHES[props.name].find(([, hex]) => hex === props.value);
+
   return (
     <div class="control">
       <div class="control-head">
@@ -117,16 +131,21 @@ function Swatches(props: {
 }
 
 type Theme = 'light' | 'dark';
+
 function useTheme() {
   const [theme, setTheme] = createSignal<Theme>(
     document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
   );
+
   createEffect(() => { document.documentElement.dataset.theme = theme(); });
+
   const toggle = () => {
     const next = theme() === 'light' ? 'dark' : 'light';
     setTheme(next);
+
     try { localStorage.setItem('robot-heads-solid-theme', next); } catch { /* storage disabled */ }
   };
+
   return [theme, toggle] as const;
 }
 
@@ -157,8 +176,13 @@ interface PropLine {
   value: string | number;
   on: boolean;
 }
+
+function isTextValue(value: PropLine['value']): value is string {
+  return typeof value === 'string';
+}
+
 const propText = (line: PropLine) =>
-  typeof line.value === 'string'
+  isTextValue(line.value)
     ? `${line.name}="${line.value}"`
     : `${line.name}={${line.value}}`;
 
@@ -167,7 +191,7 @@ function PropTokens(props: { line: PropLine }) {
     <>
       <span class="tok-attr">{props.line.name}</span>
       <span class="tok-punct">=</span>
-      {typeof props.line.value === 'string' ? (
+      {isTextValue(props.line.value) ? (
         <span class="tok-string">"{props.line.value}"</span>
       ) : (
         <>
@@ -182,10 +206,13 @@ function PropTokens(props: { line: PropLine }) {
 
 function Snippet(props: { lines: PropLine[] }) {
   const previous = new Map<string, PropLine>();
+
   const displayed = (line: PropLine) => {
     if (line.on) previous.set(line.key, line);
+
     return previous.get(line.key) ?? line;
   };
+
   return (
     <pre class="code"><code>
       <span class="code-line"><span class="tok-punct">{'<'}</span><span class="tok-tag">RobotHead</span></span>
@@ -205,6 +232,7 @@ function useCopy() {
   const [copied, setCopied] = createSignal<string | null>(null);
   let timeout: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(timeout));
+
   const copy = (key: string, value: string) => {
     void navigator.clipboard?.writeText(value).then(() => {
       setCopied(key);
@@ -212,18 +240,19 @@ function useCopy() {
       timeout = setTimeout(() => setCopied(null), 1400);
     }).catch(() => {});
   };
+
   return [copied, copy] as const;
 }
 
 export default function App(): JSX.Element {
   const [state, setState] = createSignal<RobotHeadState>(
-    robotHeadStates.includes(q.get('state') as RobotHeadState)
-      ? q.get('state') as RobotHeadState : 'idle',
+    robotHeadStates.find((value) => value === q.get('state')) ?? 'idle',
   );
+
   const [shape, setShapeState] = createSignal<RobotHeadShape>(
-    robotHeadShapes.includes(q.get('shape') as RobotHeadShape)
-      ? q.get('shape') as RobotHeadShape : 'rectangle',
+    robotHeadShapes.find((value) => value === q.get('shape')) ?? 'rectangle',
   );
+
   const [colors, setColors] = createSignal<Colors>(DEFAULTS);
   const [speed, setSpeed] = createSignal(1);
   const [paused, setPaused] = createSignal(q.has('paused'));
@@ -237,12 +266,14 @@ export default function App(): JSX.Element {
     url.searchParams.set('shape', next);
     history.replaceState(null, '', url);
   };
+
   const changed = createMemo(() =>
     colors().color !== DEFAULTS.color ||
     colors().trimColor !== DEFAULTS.trimColor ||
     colors().screenColor !== DEFAULTS.screenColor ||
     speed() !== 1 || paused(),
   );
+
   const lines = createMemo<PropLine[]>(() => [
     { key: 'shape', name: 'shape', value: shape(), on: true },
     { key: 'state', name: 'state', value: state(), on: true },
@@ -251,6 +282,7 @@ export default function App(): JSX.Element {
     { key: 'screenColor', name: 'screenColor', value: colors().screenColor, on: colors().screenColor !== DEFAULTS.screenColor },
     { key: 'speed', name: 'speed', value: speed(), on: speed() !== 1 },
   ]);
+
   const snippet = createMemo(() =>
     `<RobotHead\n${lines().filter((line) => line.on).map((line) => `  ${propText(line)}\n`).join('')}/>`,
   );
@@ -294,7 +326,7 @@ export default function App(): JSX.Element {
       </main>
 
       <aside class="controls" aria-label="Controls">
-        {(Object.keys(SWATCHES) as Array<keyof Colors>).map((key) => (
+        {COLOR_KEYS.map((key) => (
           <Swatches name={key} value={colors()[key]}
             onChange={(value) => setColors((current) => ({ ...current, [key]: value }))} />
         ))}

@@ -208,6 +208,9 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
     padding: 24px 20px 128px;
   }
   .masthead, .stage, .controls, .states { grid-column: 1; grid-row: auto; }
+  .masthead { min-width: 0; flex-wrap: wrap; gap: 8px 20px; }
+  .masthead-end { min-width: 0; flex-wrap: wrap; gap: 4px 12px; }
+  .install { flex-wrap: wrap; gap: 4px 8px; }
   .controls { align-self: stretch; }
   .states { flex-wrap: wrap; row-gap: 20px; }
   .state { flex-basis: 30%; }

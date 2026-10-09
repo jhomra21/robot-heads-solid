@@ -8,8 +8,11 @@ type Tick = (dt: number) => void;
 export const pointer = { x: NaN, y: NaN };
 
 const subscribers = new Set<Tick>();
+
 let frame = 0;
+
 let last = 0;
+
 let listening = false;
 
 function loop(now: number) {
@@ -17,6 +20,7 @@ function loop(now: number) {
   const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
   last = now;
   subscribers.forEach((fn) => fn(dt));
+
   if (subscribers.size) frame = requestAnimationFrame(loop);
 }
 
@@ -34,10 +38,12 @@ function stop() {
 function listen() {
   if (listening || typeof document === 'undefined') return;
   listening = true;
+
   const away = () => {
     pointer.x = NaN;
     pointer.y = NaN;
   };
+
   document.addEventListener('pointermove', (e) => {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
@@ -54,8 +60,10 @@ export function subscribe(fn: Tick): () => void {
   listen();
   subscribers.add(fn);
   start();
+
   return () => {
     subscribers.delete(fn);
+
     if (!subscribers.size) stop();
   };
 }

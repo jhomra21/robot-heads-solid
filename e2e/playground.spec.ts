@@ -10,19 +10,25 @@ test('shape, state, paint, appearance, and pause controls work in Solid', async 
     await page.getByRole('button', { name: shape, exact: true }).click();
     await expect(page).toHaveURL(new RegExp('shape=' + shape.toLowerCase()));
   }
+
   for (const state of ['Thinking', 'Searching', 'Listening', 'Speaking', 'Working', 'Happy', 'Error', 'Sleeping', 'Idle']) {
     await page.locator('nav[aria-label="State"]').getByRole('button', { name: state, exact: true }).click();
     await expect(page.getByRole('heading', { name: state })).toBeVisible();
   }
 
   const painted = await page.locator('main.stage canvas').evaluate((canvas) => {
+    // SAFETY: the locator selects a canvas element.
     const c = canvas as HTMLCanvasElement;
     const ctx = c.getContext('2d', { willReadFrequently: true });
+
     if (!ctx || !c.width || !c.height) return false;
     const data = ctx.getImageData(0, 0, c.width, c.height).data;
+
     for (let i = 3; i < data.length; i += 4) if (data[i] > 0) return true;
+
     return false;
   });
+
   expect(painted).toBe(true);
 
   await page.getByRole('button', { name: 'Tomato' }).click();

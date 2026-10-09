@@ -10,7 +10,7 @@ This is an independent Solid port of the MIT-licensed React project. The renderi
 bun add robot-heads-solid
 ~~~
 
-Requires Solid 1.9+ or a compatible Solid 2 prerelease. React, Three.js, and WebGL are not required.
+Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
 
 ## Usage
 
@@ -74,12 +74,17 @@ Animations use one shared requestAnimationFrame loop and stop when the page is h
 ~~~sh
 bun install
 bun run dev        # Solid playground
+bun run lint       # Oxlint: anti-slop rules and classic complexity (max 20)
 bun run typecheck
 bun run build      # library ES/CJS bundles and declarations
-bun run check      # library and playground checks
+bun run check      # lint, library and playground checks
+bun run e2e        # playground browser regressions, including all 36 shape/state combinations
+bun run e2e:consumer # build/package/typecheck/browser-test an independent Solid 1 consumer
 ~~~
 
 The playground lives in 'site/'. The library is in 'src/'. To build the Cloudflare Worker playground, run 'bun run deploy' after configuring your Cloudflare account.
+
+Lint uses the vendored rules in 'tools/oxlint/anti-slop/' plus Oxlint's native accumulating-spread and ESLint classic cyclomatic-complexity rules. Geometric shape names are explicitly allowed by the shape-name rule because shape is a real domain concept here; unrelated `*Shape` names remain forbidden. Legitimate TypeScript type predicates may use `typeof` to distinguish Solid's callback and style unions. Browser screenshots and pixel observations are saved under 'test-results/'.
 
 For now, the playground loads Open Runde fonts from the upstream repository because the source font binaries could not be transferred through the available GitHub connection. The library itself does not require fonts or external assets.
 

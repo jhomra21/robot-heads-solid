@@ -29,11 +29,13 @@ const makeCanvas = (w: number, h: number) => {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(w));
   c.height = Math.max(1, Math.ceil(h));
+
   return c;
 };
 
 const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+
   return t * t * (3 - 2 * t);
 };
 
@@ -41,11 +43,13 @@ const smooth = (a: number, b: number, x: number) => {
 const hash = (x: number, y: number) => {
   let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
   h = Math.imul(h ^ (h >>> 13), 1274126177);
+
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 };
 
 const HALF: V3 = (() => {
   const l = Math.hypot(KEY[0], KEY[1], KEY[2] + 1);
+
   return [KEY[0] / l, KEY[1] / l, (KEY[2] + 1) / l];
 })();
 
@@ -60,13 +64,16 @@ const SCREEN_OVER = 0.035;
 
 /* the glass's half extents, and the screen image's: the glass or the LED grid, whichever is bigger */
 const glassOf = (s: Shape) => ({ hx: s.hx - INSET.glass, hy: s.hy - INSET.glass });
+
 function screenOf(s: Shape) {
   const g = glassOf(s);
+
   return {
     hx: Math.max(g.hx, (COLS / 2) * s.pitch) + SCREEN_OVER,
     hy: Math.max(g.hy, (ROWS / 2) * s.pitch) + SCREEN_OVER,
   };
 }
+
 const plateOf = (s: Shape) => ({ hx: s.hx - INSET.plate, hy: s.hy - INSET.plate });
 
 /**
@@ -81,12 +88,15 @@ function bakeRelief(shape: Shape, unit: number, fn: (u: number, v: number, px: n
   const img = ctx.createImageData(c.width, c.height);
   const d = img.data;
   const px = (PLATE.hx * 2) / c.width;
+
   for (let iy = 0; iy < c.height; iy++) {
     const v = -PLATE.hy + (iy + 0.5) * px;
+
     for (let ix = 0; ix < c.width; ix++) {
       const u = -PLATE.hx + (ix + 0.5) * px;
       const edge = shape.sd(u, v, INSET.plate);
       const cover = Math.min(1, Math.max(0, 0.5 - edge / px));
+
       if (cover <= 0) continue;
       const val = fn(u, v, px, ix, iy);
       const i = (iy * c.width + ix) * 4;
@@ -96,7 +106,9 @@ function bakeRelief(shape: Shape, unit: number, fn: (u: number, v: number, px: n
       d[i + 3] = Math.round(a * 255);
     }
   }
+
   ctx.putImageData(img, 0, 0);
+
   return c;
 }
 
@@ -106,6 +118,7 @@ function tilt(nx: number, ny: number, nz: number, gloss = 0.55, power = 36): num
   nx /= l; ny /= l; nz /= l;
   const diff = (nx * KEY[0] + ny * KEY[1] + nz * KEY[2] - KEY[2]) * 0.95;
   const spec = gloss * Math.pow(Math.max(0, nx * HALF[0] + ny * HALF[1] + nz * HALF[2]), power);
+
   return diff + spec - gloss * Math.pow(HALF[2], power);
 }
 
@@ -115,6 +128,7 @@ function grad(fn: (u: number, v: number) => number, u: number, v: number): [numb
   const gx = fn(u + e, v) - fn(u - e, v);
   const gy = fn(u, v + e) - fn(u, v - e);
   const l = Math.hypot(gx, gy) || 1;
+
   return [gx / l, gy / l];
 }
 
@@ -122,14 +136,18 @@ function screw(u: number, v: number, cx: number, cy: number, angle: number): num
   const rs = 0.013;
   const dx = u - cx, dy = v - cy;
   const d = Math.hypot(dx, dy);
+
   if (d > rs + 0.006) return null;
+
   if (d > rs) return -0.5 * (1 - (d - rs) / 0.006);
   const nz = Math.sqrt(Math.max(0, 1 - (d / rs) ** 2)) + 0.6;
   let val = tilt(dx / rs, dy / rs, nz, 0.9, 30) * 1.3 + 0.08;
   /* the slot */
   const c = Math.cos(angle), s = Math.sin(angle);
   const across = Math.abs(dx * -s + dy * c);
+
   if (across < 0.0026 && d < rs * 0.8) val = -0.65;
+
   return val;
 }
 
@@ -138,34 +156,46 @@ function bakeFront(shape: Shape, unit: number) {
   const sdHole = (u: number, v: number) => shape.sd(u, v, INSET.hole);
   const sdGlass = (u: number, v: number) => shape.sd(u, v, INSET.glass);
   const screws = shape.screws;
+
   return bakeRelief(shape, unit, (u, v, _px, ix, iy) => {
     const grain = (hash(ix, iy) - 0.5) * 0.07;
+
     for (const [cx, cy, a] of screws) {
       const s = screw(u, v, cx, cy, a);
+
       if (s !== null) return s;
     }
+
     const dh = sdHole(u, v);
+
     if (dh >= 0) {
       /* the shell rolls down into the hole */
       if (dh < LIP) {
         const [gx, gy] = grad(sdHole, u, v);
         const s = 1 - dh / LIP;
         const th = s * s * 1.25;
+
         return tilt(-gx * Math.sin(th), -gy * Math.sin(th), Math.cos(th)) + grain;
       }
+
       return grain;
     }
+
     const dg = sdGlass(u, v);
+
     if (dg >= 0) {
       /* the rubber gasket, a soft bead */
       const s = dg / HEAD.gasket;
       const [gx, gy] = grad(sdGlass, u, v);
       const th = (s - 0.45) * 2.2;
+
       return tilt(gx * Math.sin(th), gy * Math.sin(th), Math.cos(th), 0.22, 14) * 0.7 + grain * 0.4;
     }
+
     /* on the glass: the lip's cast shadow, darker toward the edge */
     const k = 0.05;
     const blocked = smooth(-0.012, 0.012, sdGlass(u - KEY[0] * k, v - KEY[1] * k));
+
     return -(0.5 * blocked + 0.32 * Math.exp(dg / 0.014));
   });
 }
@@ -174,32 +204,43 @@ function bakeBack(shape: Shape, unit: number) {
   const vents = [-0.12, -0.065, -0.01, 0.045, 0.1];
   const panel = (u: number, v: number) => shape.sd(u, v, INSET.plate + 0.04);
   const screws = shape.backScrews;
+
   return bakeRelief(shape, unit, (u, v, _px, ix, iy) => {
     const grain = (hash(ix, iy) - 0.5) * 0.07;
+
     for (const [cx, cy, a] of screws) {
       const s = screw(u, v, cx, cy, a);
+
       if (s !== null) return s;
     }
+
     /* a panel line */
     const dp = panel(u, v);
+
     if (Math.abs(dp) < 0.006) {
       const [gx, gy] = grad(panel, u, v);
       const th = (dp / 0.006) * 1.1;
+
       return tilt(-gx * Math.sin(th), -gy * Math.sin(th), Math.cos(th)) * 0.9 - 0.18;
     }
+
     for (const vy of vents) {
       const slot = (a: number, b: number) => Math.hypot(Math.max(0, Math.abs(a) - 0.196), b - vy) - 0.014;
       const d = slot(u, v);
+
       if (d < 0) {
         /* down in the slot: dark, the top lip's shadow over it */
         return -0.72 - 0.15 * smooth(-0.014, 0, -(v - vy));
       }
+
       if (d < 0.01) {
         const [gx, gy] = grad(slot, u, v);
         const th = (1 - d / 0.01) ** 2 * 1.2;
+
         return tilt(-gx * Math.sin(th), -gy * Math.sin(th), Math.cos(th)) + grain;
       }
     }
+
     return grain;
   });
 }
@@ -221,10 +262,13 @@ function bakeScreenBase(w: number, h: number, pitch: number, x0: number, y0: num
   const c0 = -Math.ceil(x0 / pitch), c1 = Math.ceil((w - x0) / pitch);
   const r0 = -Math.ceil(y0 / pitch), r1 = Math.ceil((h - y0) / pitch);
   ctx.fillStyle = lens;
+
   for (let r = r0; r < r1; r++) for (let q = c0; q < c1; q++) ctx.fillRect(x0 + q * pitch + off, y0 + r * pitch + off, cell, cell);
   /* a faint highlight on the top edge of each lens */
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
+
   for (let r = r0; r < r1; r++) for (let q = c0; q < c1; q++) ctx.fillRect(x0 + q * pitch + off, y0 + r * pitch + off, cell, Math.max(1, cell * 0.16));
+
   return c;
 }
 
@@ -252,6 +296,7 @@ function bakeGlass(w: number, h: number) {
   ctx.fillStyle = spot;
   ctx.fillRect(-w, -h * 3, w * 2, h * 6);
   ctx.restore();
+
   return c;
 }
 
@@ -259,26 +304,32 @@ function grainPattern(ctx: CanvasRenderingContext2D): CanvasPattern | null {
   const c = makeCanvas(128, 128);
   const g = c.getContext('2d')!;
   const img = g.createImageData(128, 128);
+
   for (let i = 0; i < 128 * 128; i++) {
     const r = hash(i, 7);
     const on = r > 0.5 ? 255 : 0;
     img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = on;
     img.data[i * 4 + 3] = Math.round(hash(i, 13) * 9);
   }
+
   g.putImageData(img, 0, 0);
+
   return ctx.createPattern(c, 'repeat');
 }
 
 /* bakes depend only on the shape and the size, so every head on the page shares them */
 const bakes = new Map<string, { front: HTMLCanvasElement; back: HTMLCanvasElement; glass: HTMLCanvasElement }>();
+
 function bakesFor(shape: Shape, unit: number) {
   const key = `${shape.name}:${Math.round(unit)}`;
   let b = bakes.get(key);
+
   if (!b) {
     const sc = screenOf(shape);
     b = { front: bakeFront(shape, unit), back: bakeBack(shape, unit), glass: bakeGlass(sc.hx * 2 * unit, sc.hy * 2 * unit) };
     bakes.set(key, b);
   }
+
   return b;
 }
 
@@ -330,7 +381,9 @@ export class RobotRenderer {
         y0: (this.screen.height - pitch * this.grid.rows) / 2,
       };
     }
+
     const key = led.join(',');
+
     if (key !== this.ledKey && this.screen) {
       this.ledKey = key;
       const { pitch, x0, y0 } = this.screenGeo;
@@ -344,41 +397,56 @@ export class RobotRenderer {
     const g = grid.v;
     const { cols, rows } = grid;
     g.fill(0);
+
     if (!sim) {
       FACES[state](grid, { lookX: 0, lookY: 0, blink: 0, time: 0.4, side: 1, seed: 0 });
+
       return grid;
     }
+
     FACES[sim.shown](grid, sim.face);
+
     /* a cross-fade from the last face, with a flicker of glitch */
     if (sim.switched < 0.3) {
       const p = this.gridPrev;
       p.v.fill(0);
       FACES[sim.previous](p, { ...sim.face, time: sim.face.time + 10 });
       const k = sim.switched / 0.3;
+
       for (let i = 0; i < g.length; i++) g[i] = g[i] * k + p.v[i] * (1 - k);
+
       if (sim.switched < 0.13) {
         const seed = Math.floor(sim.time * 30);
+
         for (let r = 0; r < rows; r++) {
           const shift = Math.floor((Math.sin(seed * 12.9 + r * 78.2) * 0.5 + 0.5) * 3) - 1;
+
           if (!shift) continue;
           const row = g.slice(r * cols, (r + 1) * cols);
+
           for (let c = 0; c < cols; c++) g[r * cols + c] = row[(c - shift + cols) % cols];
         }
+
         for (let i = 0; i < g.length; i++) if (Math.sin(i * 91.7 + seed * 3.1) > 0.93) g[i] = Math.max(g[i], 0.3);
       }
     }
+
     /* switching on: a bright line that opens to the full screen */
     if (sim.age < 0.55) {
       const open = smooth(0.08, 0.5, sim.age) * (rows / 2 + 0.5);
+
       for (let r = 0; r < rows; r++) {
         const d = Math.abs(r - (rows - 1) / 2);
+
         for (let c = 0; c < cols; c++) {
           const i = r * cols + c;
+
           if (d > open) g[i] = 0;
           else if (d > open - 1.2) g[i] = Math.max(g[i], 0.85 * (1 - sim.age / 0.55));
         }
       }
     }
+
     return grid;
   }
 
@@ -394,9 +462,11 @@ export class RobotRenderer {
     const coreCss = `rgb(${core.map(Math.round).join(',')})`;
     const bleedCss = `rgb(${led.map(Math.round).join(',')})`;
     const cell = pitch * 0.8, off = (pitch - cell) / 2;
+
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const v = g[r * cols + c];
+
         if (v < 0.01) continue;
         ctx.globalAlpha = Math.min(1, v * 0.4);
         ctx.fillStyle = bleedCss;
@@ -406,16 +476,20 @@ export class RobotRenderer {
         ctx.fillRect(x0 + c * pitch + off, y0 + r * pitch + off, cell, cell);
       }
     }
+
     /* bloom: the matrix at one pixel per LED, scaled up smooth */
     const t = this.tiny.getContext('2d')!;
+
     if (!this.tinyImg) this.tinyImg = t.createImageData(cols, rows);
     const d = this.tinyImg.data;
+
     for (let i = 0; i < cols * rows; i++) {
       d[i * 4] = led[0];
       d[i * 4 + 1] = led[1];
       d[i * 4 + 2] = led[2];
       d[i * 4 + 3] = Math.round(Math.min(1, g[i]) * 255);
     }
+
     t.putImageData(this.tinyImg, 0, 0);
     const h = this.tinyHalf.getContext('2d')!;
     h.clearRect(0, 0, this.tinyHalf.width, this.tinyHalf.height);
@@ -432,51 +506,9 @@ export class RobotRenderer {
     ctx.drawImage(this.glass!, 0, 0);
   }
 
-  draw(ctx: CanvasRenderingContext2D, size: number, pose: RobotPose, sim: RobotSim | null, state: RobotHeadState, shape: Shape, palette: Palette, opts: RenderOptions) {
-    /* every shape fits the same box: antenna to chin, with room to hop */
-    /* Fit the whole travel, not just the rest pose: above the head the
-       antenna and its bulb's glow at the top of the highest hop (a click),
-       below it the floor's shadow. In head units. */
-    const ABOVE = HEAD_TRAVEL.antenna + HEAD_TRAVEL.glow + HEAD_TRAVEL.hop;
-    const BELOW = HEAD_TRAVEL.shadow;
-    const U = Math.min(size * 0.6, (size * (1 - 2 * HEAD_TRAVEL.margin)) / (2 * shape.hy + ABOVE + BELOW));
-    const PLATE = plateOf(shape);
-    const GLASS = glassOf(shape);
-    const SCREEN = screenOf(shape);
-    const shown = sim ? sim.shown : state;
-    const lightNow = LIGHTS[shown];
-    let led: RGB = lightNow.screen ?? palette.led;
-    if (sim && sim.switched < 0.3) {
-      const was = LIGHTS[sim.previous].screen ?? palette.led;
-      led = mix(was, led, sim.switched / 0.3).map(Math.round) as RGB;
-    }
-    this.prepare(shape, U, led);
-    if (!this.layer || this.layer.width !== ctx.canvas.width || this.layer.height !== ctx.canvas.height) {
-      this.layer = makeCanvas(ctx.canvas.width, ctx.canvas.height);
-      this.grain = grainPattern(ctx);
-    }
-    const layer = this.layer.getContext('2d')!;
-
-    const R = rotation(pose.yaw, pose.pitch, pose.roll);
-    const cx = size / 2 + pose.x * U;
-    /* the rest height that puts the top of that travel just inside the canvas */
-    const rest = size * HEAD_TRAVEL.margin + (shape.hy + ABOVE) * U;
-    const cy = rest - pose.lift * U;
-    const by = cy + shape.hy * U;
-    const P = (x: number, y: number, z: number): V3 => {
-      const r = rotate(R, x, y, z);
-      return [cx + r[0] * U * pose.sx, by + (cy + r[1] * U - by) * pose.sy, r[2]];
-    };
-    const plane = (c: CanvasRenderingContext2D, z: number, flip: boolean) => {
-      const o = P(0, 0, z), ex = P(flip ? -1 : 1, 0, z), ey = P(0, 1, z);
-      c.setTransform(ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]);
-    };
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
+  private drawFloorShadow(ctx: CanvasRenderingContext2D, size: number, pose: RobotPose, rest: number, shape: Shape, U: number, floorShadow: boolean) {
     /* the floor's shadow, smaller and fainter the higher the head is */
-    if (opts.floorShadow) {
+    if (floorShadow) {
       const up = Math.max(0, pose.lift);
       const fy = rest + (shape.hy + 0.11) * U;
       const rx = U * shape.hx * (1 - up * 0.9) * pose.sx;
@@ -495,6 +527,75 @@ export class RobotRenderer {
       ctx.restore();
     }
 
+  }
+
+  private drawGrain(layer: CanvasRenderingContext2D, cx: number, cy: number) {
+    if (this.grain) {
+      layer.setTransform(1, 0, 0, 1, 0, 0);
+      layer.globalCompositeOperation = 'source-atop';
+      const m = typeof DOMMatrix === 'undefined' ? null : new DOMMatrix().translate(cx, cy);
+
+      if (m && 'setTransform' in this.grain) this.grain.setTransform(m);
+      layer.fillStyle = this.grain;
+      layer.fillRect(0, 0, layer.canvas.width, layer.canvas.height);
+      layer.globalCompositeOperation = 'source-over';
+    }
+
+  }
+
+  draw(ctx: CanvasRenderingContext2D, size: number, pose: RobotPose, sim: RobotSim | null, state: RobotHeadState, shape: Shape, palette: Palette, opts: RenderOptions) {
+    /* every shape fits the same box: antenna to chin, with room to hop */
+    /* Fit the whole travel, not just the rest pose: above the head the
+       antenna and its bulb's glow at the top of the highest hop (a click),
+       below it the floor's shadow. In head units. */
+    const ABOVE = HEAD_TRAVEL.antenna + HEAD_TRAVEL.glow + HEAD_TRAVEL.hop;
+    const BELOW = HEAD_TRAVEL.shadow;
+    const U = Math.min(size * 0.6, (size * (1 - 2 * HEAD_TRAVEL.margin)) / (2 * shape.hy + ABOVE + BELOW));
+    const PLATE = plateOf(shape);
+    const GLASS = glassOf(shape);
+    const SCREEN = screenOf(shape);
+    const shown = sim ? sim.shown : state;
+    const lightNow = LIGHTS[shown];
+    let led: RGB = lightNow.screen ?? palette.led;
+
+    if (sim && sim.switched < 0.3) {
+      const was = LIGHTS[sim.previous].screen ?? palette.led;
+      // SAFETY: mix returns exactly three RGB channels; map preserves its length.
+      led = mix(was, led, sim.switched / 0.3).map(Math.round) as RGB;
+    }
+
+    this.prepare(shape, U, led);
+
+    if (!this.layer || this.layer.width !== ctx.canvas.width || this.layer.height !== ctx.canvas.height) {
+      this.layer = makeCanvas(ctx.canvas.width, ctx.canvas.height);
+      this.grain = grainPattern(ctx);
+    }
+
+    const layer = this.layer.getContext('2d')!;
+
+    const R = rotation(pose.yaw, pose.pitch, pose.roll);
+    const cx = size / 2 + pose.x * U;
+    /* the rest height that puts the top of that travel just inside the canvas */
+    const rest = size * HEAD_TRAVEL.margin + (shape.hy + ABOVE) * U;
+    const cy = rest - pose.lift * U;
+    const by = cy + shape.hy * U;
+
+    const P = (x: number, y: number, z: number): V3 => {
+      const r = rotate(R, x, y, z);
+
+      return [cx + r[0] * U * pose.sx, by + (cy + r[1] * U - by) * pose.sy, r[2]];
+    };
+
+    const plane = (c: CanvasRenderingContext2D, z: number, flip: boolean) => {
+      const o = P(0, 0, z), ex = P(flip ? -1 : 1, 0, z), ey = P(0, 1, z);
+      c.setTransform(ex[0] - o[0], ex[1] - o[1], ey[0] - o[0], ey[1] - o[1], o[0], o[1]);
+    };
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    this.drawFloorShadow(ctx, size, pose, rest, shape, U, opts.floorShadow);
+
     const { body, earL, earR, collar } = this.meshes!;
     const earLz = rotate(R, -shape.earX - 0.05, HEAD.earY, 0)[2];
     const earRz = rotate(R, shape.earX + 0.05, HEAD.earY, 0)[2];
@@ -504,31 +605,40 @@ export class RobotRenderer {
     const drawMesh = (c: CanvasRenderingContext2D, mesh: Mesh, mat: Material) => {
       const n = mesh.pos.length / 3;
       const pr = this.proj;
+
       for (let i = 0; i < n; i++) {
         const p = P(mesh.pos[i * 3], mesh.pos[i * 3 + 1], mesh.pos[i * 3 + 2]);
         pr[i * 3] = p[0]; pr[i * 3 + 1] = p[1]; pr[i * 3 + 2] = p[2];
       }
+
       const order: Array<[number, number]> = [];
       const q = mesh.quads, nn = mesh.normals;
+
       for (let k = 0; k < q.length / 4; k++) {
         const nz = R[6] * nn[k * 3] + R[7] * nn[k * 3 + 1] + R[8] * nn[k * 3 + 2];
+
         if (nz < -0.03) continue;
         const z = pr[q[k * 4] * 3 + 2] + pr[q[k * 4 + 1] * 3 + 2] + pr[q[k * 4 + 2] * 3 + 2] + pr[q[k * 4 + 3] * 3 + 2];
         order.push([z, k]);
       }
+
       order.sort((a, b) => a[0] - b[0]);
       c.lineWidth = Math.max(0.6, U / 260);
       c.lineJoin = 'round';
+
       for (const [, k] of order) {
         const nx = nn[k * 3], ny = nn[k * 3 + 1], nz0 = nn[k * 3 + 2];
         const w = rotate(R, nx, ny, nz0);
         const col = shadeCss(mat, w[0], w[1], w[2]);
         c.beginPath();
+
         for (let j = 0; j < 4; j++) {
           const vi = q[k * 4 + j] * 3;
+
           if (j) c.lineTo(pr[vi], pr[vi + 1]);
           else c.moveTo(pr[vi], pr[vi + 1]);
         }
+
         c.closePath();
         c.fillStyle = col;
         c.strokeStyle = col;
@@ -540,7 +650,9 @@ export class RobotRenderer {
     const antenna = () => this.drawAntenna(ctx, P, U, pose, palette, sim, shown, lightNow, collar);
 
     if (antennaBehind) antenna();
+
     if (earLz < 0) drawMesh(ctx, earL, palette.trim);
+
     if (earRz < 0) drawMesh(ctx, earR, palette.trim);
 
     /* the shell, on its own layer so the grain stays on it */
@@ -551,14 +663,18 @@ export class RobotRenderer {
     const frontZ = R[8];
     const zf = shape.depth / 2;
     const facing = Math.abs(frontZ) > 0.005 ? (frontZ > 0 ? 1 : -1) : 0;
+
     if (facing) {
       const dome = 0.17;
       plane(layer, facing * zf, facing < 0);
+
       const at = (dx: number, dy: number) => {
         const w = rotate(R, dx * (facing < 0 ? -1 : 1), dy, facing);
         const l = Math.hypot(w[0], w[1], w[2]);
+
         return css(radiance(palette.shell, w[0] / l, w[1] / l, w[2] / l));
       };
+
       layer.beginPath();
       shape.path(layer, INSET.plate - 0.002);
       const vg = layer.createLinearGradient(0, -PLATE.hy, 0, PLATE.hy);
@@ -576,15 +692,9 @@ export class RobotRenderer {
       layer.fill();
       layer.globalAlpha = 1;
     }
-    if (this.grain) {
-      layer.setTransform(1, 0, 0, 1, 0, 0);
-      layer.globalCompositeOperation = 'source-atop';
-      const m = typeof DOMMatrix === 'function' ? new DOMMatrix().translate(cx, cy) : null;
-      if (m && 'setTransform' in this.grain) this.grain.setTransform(m);
-      layer.fillStyle = this.grain;
-      layer.fillRect(0, 0, this.layer.width, this.layer.height);
-      layer.globalCompositeOperation = 'source-over';
-    }
+
+    this.drawGrain(layer, cx, cy);
+
     ctx.drawImage(this.layer, 0, 0);
 
     /* the plate's details: the screen in front, the vents behind */
@@ -626,7 +736,9 @@ export class RobotRenderer {
     }
 
     if (earLz >= 0) drawMesh(ctx, earL, palette.trim);
+
     if (earRz >= 0) drawMesh(ctx, earR, palette.trim);
+
     if (!antennaBehind) antenna();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -646,22 +758,29 @@ export class RobotRenderer {
     const R = rotation(pose.yaw, pose.pitch, pose.roll);
     const pr = this.proj;
     const n = collar.pos.length / 3;
+
     for (let i = 0; i < n; i++) {
       const p = P(collar.pos[i * 3], collar.pos[i * 3 + 1], collar.pos[i * 3 + 2]);
       pr[i * 3] = p[0]; pr[i * 3 + 1] = p[1]; pr[i * 3 + 2] = p[2];
     }
+
     const q = collar.quads, nn = collar.normals;
     ctx.lineWidth = Math.max(0.6, U / 260);
+
     for (let k = 0; k < q.length / 4; k++) {
       const w = rotate(R, nn[k * 3], nn[k * 3 + 1], nn[k * 3 + 2]);
+
       if (w[2] < -0.03) continue;
       const col = shadeCss(palette.trim, w[0], w[1], w[2]);
       ctx.beginPath();
+
       for (let j = 0; j < 4; j++) {
         const vi = q[k * 4 + j] * 3;
+
         if (j) ctx.lineTo(pr[vi], pr[vi + 1]);
         else ctx.moveTo(pr[vi], pr[vi + 1]);
       }
+
       ctx.closePath();
       ctx.fillStyle = col;
       ctx.strokeStyle = col;
@@ -698,12 +817,14 @@ export class RobotRenderer {
     /* the bulb: frosted glass, lit from inside by the state's light */
     let colour: RGB = lightNow.ball;
     let level = lightNow.pulse(sim ? sim.face.time : 0.3);
+
     if (sim && sim.switched < 0.3) {
       const was = LIGHTS[sim.previous];
       const k = sim.switched / 0.3;
       colour = mix(was.ball, colour, k);
       level = was.pulse(sim.face.time + 10) * (1 - k) + level * k;
     }
+
     if (sim && sim.age < 0.55) level *= smooth(0.1, 0.5, sim.age);
     void shown;
     const r = HEAD.ball * U * pose.sx;
@@ -721,6 +842,7 @@ export class RobotRenderer {
     g.addColorStop(0.38, `rgb(${lit.map(Math.round).join(',')})`);
     g.addColorStop(0.78, `rgb(${shoulder.map(Math.round).join(',')})`);
     g.addColorStop(1, `rgb(${edge.map(Math.round).join(',')})`);
+
     /* its glow, behind the bulb so it lights the air and never washes out the glass */
     if (level > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
@@ -735,6 +857,7 @@ export class RobotRenderer {
       ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
+
     /* where the bulb sits on the stem, a little contact shade */
     const seat = ctx.createRadialGradient(bx, by + r * 0.9, 0, bx, by + r * 0.9, r * 0.7);
     seat.addColorStop(0, 'rgba(20,24,32,0.28)');
