@@ -7,10 +7,10 @@ This is an independent Solid port of the MIT-licensed React project. The renderi
 ## Install
 
 ~~~sh
-bun add robot-heads-solid@beta
+bun add robot-heads-solid
 ~~~
 
-The prepared next beta is `0.1.0-beta.3`; after its trusted-publisher release succeeds, the `beta` tag will resolve to it while `latest` remains on `0.1.0-beta.0` until a stable release. Use `@beta` explicitly. Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
+The stable release is `0.1.0`. Tested with Solid 1.9.17. Solid 2 prerelease compatibility has not been verified; its current release candidate does not provide the Solid 1 `solid-js/web` and `solid-js/jsx-runtime` entry points used by the tested consumer toolchain. React, Three.js, and WebGL are not required.
 
 ## Releases
 
@@ -26,8 +26,8 @@ One-time maintainer setup:
 For each release, merge the versioned package change to `main`, then create and push its matching tag:
 
 ~~~sh
-git tag -a vX.Y.Z-beta.N -m "vX.Y.Z-beta.N"
-git push origin vX.Y.Z-beta.N
+git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin vX.Y.Z
 ~~~
 
 Do not run `npm publish` locally. If npm Trusted Publishing is not configured or the workflow binding does not match, the publish job will fail without a token fallback.

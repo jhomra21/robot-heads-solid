@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-test('consumer package installs the beta manifest from a version-independent tarball', () => {
+test('consumer package installs the stable manifest from a versioned tarball', () => {
   const manifest = JSON.parse(readFileSync('e2e/consumer/node_modules/robot-heads-solid/package.json', 'utf8'));
-  expect(manifest.version).toBe('0.1.0-beta.3');
-  expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' });
+  expect(manifest.version).toBe('0.1.0');
+  expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'latest' });
 });
 
 test('packed tarball loads and reacts in an external Solid 1 application', async ({ page }) => {
