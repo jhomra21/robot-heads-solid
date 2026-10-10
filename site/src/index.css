@@ -79,9 +79,14 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 
 /* ── masthead ── */
 .masthead { grid-column: 1 / -1; grid-row: 1; display: flex; align-items: center; justify-content: space-between; }
-.byline { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.byline { display: flex; align-items: center; gap: 8px; font-size: 16px; min-width: 0; }
+.credits { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 6px; min-width: 0; }
 .name { font-weight: 600; letter-spacing: -0.01em; }
 .by { color: var(--muted); }
+.credit-link { color: var(--soft); text-decoration: none; font-weight: 500; transition: color .15s; }
+.credit-link:hover { color: var(--text); }
+.credit-link:focus-visible { outline: 1.5px solid var(--soft); outline-offset: 4px; border-radius: 999px; }
+.credit-divider { color: var(--muted); }
 .author { display: inline-flex; align-items: center; gap: 8px; color: var(--soft); text-decoration: none; font-weight: 500; transition: color .15s; }
 .author:hover { color: var(--text); }
 .author img { width: 24px; height: 24px; border-radius: 50%; background: var(--fill); }
@@ -211,6 +216,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   }
   .masthead, .stage, .controls, .states { grid-column: 1; grid-row: auto; }
   .masthead { min-width: 0; flex-wrap: wrap; gap: 8px 20px; }
+  .byline { flex-wrap: wrap; }
   .masthead-end { min-width: 0; flex-wrap: wrap; gap: 4px 12px; }
   .install { flex-wrap: wrap; gap: 4px 8px; }
   .controls { align-self: stretch; padding-top: 0; overflow-y: visible; }

@@ -63,9 +63,13 @@ function useStageSize() {
     if (w < 900) {
       // On short narrow screens the wrapped masthead and fixed dock share
       // the first viewport with the preview hint.
-      const shortScreen = w <= 480 && h <= 700 ? h - 392 : 400;
+      const mastheadHeight = document.querySelector('.masthead')?.getBoundingClientRect().height ?? 88;
 
-      return Math.max(240, Math.min(w - 32, shortScreen, 400));
+      const shortScreen = w <= 480 && h <= 700
+        ? h - 392 - Math.max(0, mastheadHeight - 88)
+        : 400;
+
+      return Math.max(w <= 480 && h <= 700 ? 200 : 240, Math.min(w - 32, shortScreen, 400));
     }
 
     const room = Math.min(w - 2 * (300 + 40 + 40), h - 300);
@@ -76,6 +80,7 @@ function useStageSize() {
   const [size, setSize] = createSignal(measure());
   onMount(() => {
     const update = () => setSize(measure());
+    update();
     window.addEventListener('resize', update);
     onCleanup(() => window.removeEventListener('resize', update));
   });
@@ -331,12 +336,18 @@ export default function App(): JSX.Element {
       <header class="masthead">
         <div class="byline">
           <span class="name">robot-heads-solid</span>
-          <span class="by">ported from</span>
-          <a class="author" href="https://github.com/fayazara/robot-heads"
-            target="_blank" rel="noopener noreferrer">
-            <img src="https://github.com/fayazara.png?size=64" alt="" width={24} height={24} />
-            Fayaz Ahmed
-          </a>
+          <span class="credits">
+            <span class="by">Solid port by</span>
+            <a class="credit-link" href="https://github.com/jhomra21"
+              target="_blank" rel="noopener noreferrer">jhomra21</a>
+            <span class="credit-divider" aria-hidden={true}>·</span>
+            <span class="by">React original by</span>
+            <a class="author" href="https://github.com/fayazara/robot-heads"
+              target="_blank" rel="noopener noreferrer">
+              <img src="https://github.com/fayazara.png?size=64" alt="" width={24} height={24} />
+              Fayaz Ahmed
+            </a>
+          </span>
         </div>
         <div class="masthead-end">
           <button class="install" onClick={() => copy('install', 'bun add robot-heads-solid')}>
