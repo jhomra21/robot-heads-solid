@@ -4,7 +4,7 @@ Animated 3D robot heads for Solid. Glossy, TV-headed bots with an LED-matrix fac
 
 Drawn on a 2D canvas: no WebGL or runtime dependencies.
 
-**[Solid playground →](https://robot-heads-solid.jhonra121.workers.dev)** · [Original React playground](https://robot-heads.fayaz.workers.dev)
+**[Playground →](https://robot-heads-solid.jhonra121.workers.dev)**
 
 ## Install
 
