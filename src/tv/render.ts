@@ -11,7 +11,7 @@ import { COLS, FACES, LIGHTS, ROWS, makeGrid, type Grid } from './faces';
 import { HEAD, INSET, headMeshes, rotate, rotation, type HeadMeshes, type Mesh, type Shape, type V3 } from './geometry';
 import { KEY, css, radiance, shadeCss, type Material } from './light';
 import type { RobotPose, RobotSim } from './sim';
-import type { RobotHeadState } from '../types';
+import type { RobotHeadState } from '../domain-types';
 
 export interface Palette {
   shell: Material;

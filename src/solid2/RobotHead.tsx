@@ -1,0 +1,193 @@
+import { createSignal, createTrackedEffect, createUniqueId, onSettled, omit } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { robotHeadShapes, robotHeadStates } from './types';
+import type { RobotHeadProps, RobotHeadShape, RobotHeadState } from './types';
+import { getShape } from '../tv/geometry';
+import { RobotSim, restPose } from '../tv/sim';
+import { RobotRenderer, type Palette } from '../tv/render';
+import { linear } from '../tv/light';
+import { parseColor } from '../color';
+import { subscribe, pointer } from '../ticker';
+
+function hashSeed(id: string): number {
+  let h = 2166136261;
+
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+function palette(color: string, trim: string, screen: string): Palette {
+  const shell = parseColor(color) ?? [48, 80, 172];
+  const metal = parseColor(trim) ?? [150, 168, 200];
+  const led = parseColor(screen) ?? [232, 242, 255];
+
+  return {
+    shell: { albedo: linear(shell), f0: 0.05, metal: 0.15, spec: 0.55, shininess: 70, rim: 0.9 },
+    trim: { albedo: linear(metal), f0: 0.2, metal: 0.65, spec: 0.8, shininess: 45, rim: 0.7 },
+    led,
+  };
+}
+
+const validState = (value: RobotHeadState | undefined): RobotHeadState =>
+  value && robotHeadStates.includes(value) ? value : 'idle';
+
+const validShape = (value: RobotHeadShape | undefined): RobotHeadShape =>
+  value && robotHeadShapes.includes(value) ? value : 'rectangle';
+
+function isClickCallback(
+  handler: RobotHeadProps['onClick'],
+): handler is JSX.EventHandler<HTMLCanvasElement, MouseEvent> {
+  return typeof handler === 'function';
+}
+
+function isRefCallback(ref: RobotHeadProps['ref']): ref is (element: HTMLCanvasElement) => void {
+  return typeof ref === 'function';
+}
+
+function assignRef(ref: RobotHeadProps['ref'], element: HTMLCanvasElement): void {
+  if (Array.isArray(ref)) {
+    for (const item of ref) assignRef(item, element);
+  } else if (isRefCallback(ref)) {
+    ref(element);
+  }
+}
+
+function isStyleText(style: RobotHeadProps['style']): style is string {
+  return typeof style === 'string';
+}
+
+/** Solid 2 renderer entry point for the animated TV-headed robot. */
+export function RobotHead(props: RobotHeadProps): JSX.Element {
+  const id = createUniqueId();
+  const local = props;
+
+  const rest = omit(props,
+    'model', 'shape', 'state', 'size', 'color', 'trimColor', 'screenColor',
+    'speed', 'paused', 'interactive', 'floorShadow', 'seed',
+    'class', 'className', 'style', 'onClick', 'aria-label', 'ref',
+  );
+
+  let canvas!: HTMLCanvasElement;
+  let renderer: RobotRenderer | undefined;
+
+  const size = () => Number.isFinite(local.size) && (local.size ?? 0) > 0
+    ? Math.max(32, Math.min(local.size!, 1024)) : 160;
+
+  const speed = () => Number.isFinite(local.speed) && (local.speed ?? -1) >= 0
+    ? Math.min(local.speed!, 8) : 1;
+
+  const sim = new RobotSim(
+    Number.isFinite(local.seed) ? Math.min(1, Math.max(0, local.seed!)) : hashSeed(id),
+    validState(local.state),
+  );
+
+  const [reduceMotion, setReduceMotion] = createSignal(false);
+  const [visible, setVisible] = createSignal(true);
+
+  onSettled(() => {
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    observer.observe(canvas);
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduceMotion(query.matches);
+    const changed = () => setReduceMotion(query.matches);
+    query.addEventListener('change', changed);
+
+    return () => {
+      observer.disconnect();
+      query.removeEventListener('change', changed);
+    };
+  });
+
+  createTrackedEffect(() => {
+    const state = validState(local.state);
+    const shape = getShape(validShape(local.shape));
+    const dimension = size();
+
+    const colors = palette(
+      local.color ?? '#2b49a3',
+      local.trimColor ?? '#93a6c8',
+      local.screenColor ?? '#e8f2ff',
+    );
+
+    const rate = speed();
+    const interactive = local.interactive ?? true;
+    const floorShadow = local.floorShadow ?? true;
+    const still = (local.paused ?? false) || !(rate > 0) || reduceMotion();
+    sim.setState(state);
+
+    const paint = (animated: boolean) => {
+      if (!canvas) return;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const pixels = Math.round(dimension * dpr);
+
+      if (canvas.width !== pixels || canvas.height !== pixels) {
+        canvas.width = pixels;
+        canvas.height = pixels;
+      }
+
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return;
+      renderer ??= new RobotRenderer();
+      renderer.draw(ctx, pixels, animated ? sim.pose : restPose(state), animated ? sim : null,
+        state, shape, colors, { floorShadow });
+    };
+
+    if (still || !visible()) {
+      if (visible()) paint(false);
+
+      return;
+    }
+
+      return subscribe((dt) => {
+      if (interactive && Number.isFinite(pointer.x)) {
+        const rect = canvas.getBoundingClientRect();
+        const dx = pointer.x - (rect.left + rect.width / 2);
+        const dy = pointer.y - (rect.top + rect.height * 0.56);
+        sim.pointer = Math.hypot(dx, dy) < 700 ? { x: dx, y: dy } : null;
+      } else {
+        sim.pointer = null;
+      }
+
+      sim.update(dt * rate);
+      paint(true);
+    });
+  });
+
+  const handleClick: JSX.EventHandler<HTMLCanvasElement, MouseEvent> = (event) => {
+    if ((local.interactive ?? true) && !(local.paused ?? false) && speed() > 0 && !reduceMotion()) {
+      sim.poke();
+    }
+
+    const handler = local.onClick;
+
+    if (isClickCallback(handler)) handler(event);
+    else if (Array.isArray(handler)) handler[0](handler[1], event);
+  };
+
+  const setRef = (element: HTMLCanvasElement) => {
+    canvas = element;
+    assignRef(local.ref, element);
+  };
+
+  return (
+    <canvas
+      ref={setRef}
+      role="img"
+      aria-label={local['aria-label'] ?? `Robot, ${validState(local.state)}`}
+      class={local.class ?? local.className}
+      style={isStyleText(local.style)
+        ? `width:${size()}px;height:${size()}px;display:block;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
+        : {
+            width: `${size()}px`,
+            height: `${size()}px`,
+            display: 'block',
+            cursor: local.interactive === false ? undefined : 'pointer',
+            ...local.style,
+          }}
+      onClick={handleClick}
+      {...rest}
+    />
+  );
+}

@@ -1,11 +1,24 @@
-import type { JSX } from 'solid-js';
-import type { RobotHeadModel, RobotHeadShape, RobotHeadState } from './domain-types';
+import type { JSX } from '@solidjs/web';
 
-export { robotHeadShapes, robotHeadStates } from './domain-types';
+export type RobotHeadState =
+  | 'idle'
+  | 'thinking'
+  | 'searching'
+  | 'listening'
+  | 'speaking'
+  | 'working'
+  | 'happy'
+  | 'error'
+  | 'sleeping';
 
-export type { RobotHeadModel, RobotHeadShape, RobotHeadState } from './domain-types';
+export declare const robotHeadStates: RobotHeadState[];
 
-/** Canvas attributes are forwarded to the underlying canvas. */
+export type RobotHeadModel = 'tv';
+
+export type RobotHeadShape = 'rectangle' | 'square' | 'circle' | 'hexagon';
+
+export declare const robotHeadShapes: RobotHeadShape[];
+
 export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvasElement>, 'color'> {
   model?: RobotHeadModel;
   shape?: RobotHeadShape;
@@ -23,3 +36,5 @@ export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvas
   /** React-compatible className alias; Solid's class prop also works. */
   className?: string;
 }
+
+export declare function RobotHead(props: RobotHeadProps): JSX.Element;

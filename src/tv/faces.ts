@@ -7,7 +7,7 @@
    covers the whole screen, whatever its shape. Effects that belong to the
    screen rather than the face (the search beam) run across all of it. */
 
-import type { RobotHeadState } from '../types';
+import type { RobotHeadState } from '../domain-types';
 
 export const COLS = 22;
 

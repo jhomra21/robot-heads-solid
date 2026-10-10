@@ -4,7 +4,7 @@
    with an optional full turn, a landing squash), and the antenna is a
    wobbly spring of its own, shaken by whatever the head does. */
 
-import type { RobotHeadState } from '../types';
+import type { RobotHeadState } from '../domain-types';
 import type { FaceParams } from './faces';
 
 class Spring {

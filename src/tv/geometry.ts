@@ -10,7 +10,7 @@
    hole for the screen, the gasket and the glass are that outline inset
    step by step, so each shape carries the same parts. */
 
-import type { RobotHeadShape } from '../types';
+import type { RobotHeadShape } from '../domain-types';
 
 export type V3 = [number, number, number];
 

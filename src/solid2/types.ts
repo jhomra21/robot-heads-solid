@@ -1,9 +1,9 @@
-import type { JSX } from 'solid-js';
-import type { RobotHeadModel, RobotHeadShape, RobotHeadState } from './domain-types';
+import type { JSX } from '@solidjs/web';
+import type { RobotHeadModel, RobotHeadShape, RobotHeadState } from '../domain-types';
 
-export { robotHeadShapes, robotHeadStates } from './domain-types';
+export { robotHeadShapes, robotHeadStates } from '../domain-types';
 
-export type { RobotHeadModel, RobotHeadShape, RobotHeadState } from './domain-types';
+export type { RobotHeadModel, RobotHeadShape, RobotHeadState } from '../domain-types';
 
 /** Canvas attributes are forwarded to the underlying canvas. */
 export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvasElement>, 'color'> {

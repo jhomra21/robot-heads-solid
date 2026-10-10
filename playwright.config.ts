@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: 'consumer.consumer.spec.ts',
+  testIgnore: ['consumer.consumer.spec.ts', 'consumer-solid2.consumer.spec.ts'],
   fullyParallel: true,
   retries: process.env.CI ? 1 : 0,
   use: {

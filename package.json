@@ -1,6 +1,6 @@
 {
   "name": "robot-heads-solid",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.0",
   "description": "Animated TV-headed robot avatars for Solid, drawn with Canvas 2D.",
   "keywords": [
     "solid",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public",
-    "tag": "latest"
+    "tag": "beta"
   },
   "type": "module",
   "repository": {
@@ -26,39 +26,57 @@
   "homepage": "https://github.com/jhomra21/robot-heads-solid#readme",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "browser": {
         "import": {
-          "types": "./dist/index.d.ts",
+          "types": "./dist/types/index.d.ts",
           "default": "./dist/index.js"
         },
         "require": {
-          "types": "./dist/index.d.ts",
+          "types": "./dist/types/index.d.ts",
           "default": "./dist/index.cjs"
         }
       },
       "node": {
         "import": {
-          "types": "./dist/index.d.ts",
+          "types": "./dist/types/index.d.ts",
           "default": "./dist/index.server.js"
         },
         "require": {
-          "types": "./dist/index.d.ts",
+          "types": "./dist/types/index.d.ts",
           "default": "./dist/index.server.cjs"
         }
       },
       "import": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/types/index.d.ts",
         "default": "./dist/index.js"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/types/index.d.ts",
         "default": "./dist/index.cjs"
       }
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./solid2": {
+      "browser": {
+        "import": {
+          "types": "./dist/solid2.d.ts",
+          "default": "./dist/solid2.js"
+        }
+      },
+      "node": {
+        "import": {
+          "types": "./dist/solid2.d.ts",
+          "default": "./dist/solid2.server.js"
+        }
+      },
+      "import": {
+        "types": "./dist/solid2.d.ts",
+        "default": "./dist/solid2.js"
+      }
+    }
   },
   "files": [
     "dist"
@@ -69,8 +87,11 @@
   ],
   "scripts": {
     "dev": "cd site && bun run dev",
-    "build": "vite build && vite build --config vite.ssr.config.ts",
-    "typecheck": "tsc --noEmit",
+    "build": "vite build && vite build --config vite.ssr.config.ts && bun run build:solid2 && bun run build:types",
+    "setup:solid2": "cd solid2-toolchain && bun install --frozen-lockfile",
+    "build:solid2": "bun run setup:solid2 && cd solid2-toolchain && bun run build",
+    "build:types": "tsc -p tsconfig.types.json",
+    "typecheck": "bun run setup:solid2 && tsc --noEmit && cd solid2-toolchain && bun run typecheck",
     "lint": "oxlint .",
     "build:site": "bun run build && cd site && bun run build",
     "check": "bun run lint && bun run typecheck && bun run build && cd site && bun run typecheck && bun run build",
@@ -78,19 +99,24 @@
     "prepublishOnly": "bun run check",
     "e2e": "playwright test",
     "e2e:consumer": "bun run build && bun run e2e:consumer:built",
-    "e2e:consumer:built": "bun pm pack --filename test-results/robot-heads-solid.tgz && cd e2e/consumer && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts"
+    "e2e:consumer:built": "bun pm pack --filename test-results/robot-heads-solid.tgz && bun pm pack --filename test-results/robot-heads-solid-solid2.tgz && cd e2e/consumer && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../consumer-solid2 && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts && bunx playwright test --config playwright.consumer-solid2.config.ts"
   },
   "peerDependencies": {
-    "solid-js": "^1.9.0"
+    "solid-js": "^1.9.0 || ^2.0.0-rc.14",
+    "@solidjs/web": "^2.0.0-rc.14"
+  },
+  "peerDependenciesMeta": {
+    "@solidjs/web": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "solid-js": "^1.9.15",
-    "vite": "^8.3.0",
-    "vite-plugin-solid": "^2.11.14",
-    "vite-plugin-dts": "^4.5.0",
-    "typescript": "^5.9.3",
+    "@oxlint/plugins": "1.87.0",
     "@playwright/test": "^1.56.0",
     "oxlint": "1.87.0",
-    "@oxlint/plugins": "1.87.0"
+    "solid-js": "^1.9.15",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.0",
+    "vite-plugin-solid": "^2.11.14"
   }
 }

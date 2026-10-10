@@ -12,7 +12,7 @@ Drawn on a 2D canvas: no WebGL or runtime dependencies.
 bun add robot-heads-solid
 ```
 
-Solid 1.9+ is a peer dependency. Solid 2 is not supported.
+Solid 1.9+ is supported by the default entry point. Solid 2 is still a prerelease and has a separate, explicitly selected entry point: `robot-heads-solid/solid2`. Do not mix the two entry points in one application. Solid 2 apps need both `solid-js` and `@solidjs/web` at matching versions. Solid 2 support is verified against `2.0.0-rc.14`; it is opt-in prerelease support, not a claim of compatibility with a stable Solid 2 release.
 
 ## Quick start
 
@@ -23,6 +23,23 @@ function Agent(props: { status: 'idle' | 'thinking' | 'speaking' }) {
   return <RobotHead state={props.status} size={160} />;
 }
 ```
+
+### Solid 2 prerelease
+
+Install matching Solid 2 prerelease packages and use the separate entry point:
+
+```sh
+bun add solid-js@2.0.0-rc.14 @solidjs/web@2.0.0-rc.14 robot-heads-solid
+```
+
+```tsx
+import { render } from '@solidjs/web';
+import { RobotHead } from 'robot-heads-solid/solid2';
+
+render(() => <RobotHead state="thinking" />, document.getElementById('root')!);
+```
+
+The default `robot-heads-solid` entry remains the Solid 1.9 build. Configure the Solid 2 JSX runtime as `jsxImportSource: "@solidjs/web"` and use the Solid 2 Vite integration (`@solidjs/vite-plugin`); the Solid 1 `vite-plugin-solid` compiler does not target Solid 2. The library's Solid 2 entry has been checked for client rendering, server rendering, hydration and early-event replay.
 
 ## Shapes
 
@@ -95,10 +112,11 @@ The library is in `src/`; the Solid playground is in `site/` and runs against th
 
 ```sh
 bun install
+bun run setup:solid2 # installs the isolated Solid 2 compiler/runtime toolchain
 bun run dev          # the playground
 bun run build        # the library, to dist/
-bun run typecheck
-bun run build:site   # build the library and playground
+bun run typecheck    # installs the isolated Solid 2 toolchain if needed
+bun run build:site   # build the library and playground (including Solid 2)
 bun run deploy       # build everything and deploy the playground Worker
 ```
 
