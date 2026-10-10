@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 test('consumer package installs the beta manifest from a version-independent tarball', () => {
   const manifest = JSON.parse(readFileSync('e2e/consumer/node_modules/robot-heads-solid/package.json', 'utf8'));
-  expect(manifest.version).toBe('0.1.0-beta.1');
+  expect(manifest.version).toBe('0.1.0-beta.2');
   expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' });
 });
 
