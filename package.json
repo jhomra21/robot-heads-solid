@@ -1,6 +1,6 @@
 {
   "name": "robot-heads-solid",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0",
   "description": "Animated TV-headed robot avatars for Solid, drawn with Canvas 2D.",
   "keywords": [
     "solid",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public",
-    "tag": "beta"
+    "tag": "latest"
   },
   "type": "module",
   "repository": {
