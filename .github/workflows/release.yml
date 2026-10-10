@@ -133,7 +133,7 @@ jobs:
           bunx playwright install --with-deps chromium
           bun run e2e
       - name: Verify packed Solid consumer
-        run: bun run e2e:consumer
+        run: bun run e2e:consumer:built
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

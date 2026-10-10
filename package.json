@@ -77,7 +77,8 @@
     "deploy": "bun run build:site && cd site && bun run deploy",
     "prepublishOnly": "bun run check",
     "e2e": "playwright test",
-    "e2e:consumer": "bun run build && bun pm pack --filename test-results/robot-heads-solid-0.1.0.tgz && cd e2e/consumer && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts"
+    "e2e:consumer": "bun run build && bun run e2e:consumer:built",
+    "e2e:consumer:built": "bun pm pack --filename test-results/robot-heads-solid.tgz && cd e2e/consumer && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts"
   },
   "peerDependencies": {
     "solid-js": "^1.9.0"

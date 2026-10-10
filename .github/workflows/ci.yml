@@ -91,7 +91,7 @@ jobs:
         if: steps.changes.outputs.docs_only != 'true'
       - run: bunx playwright test
         if: steps.changes.outputs.docs_only != 'true'
-      - run: bun run e2e:consumer
+      - run: bun run e2e:consumer:built
         if: steps.changes.outputs.docs_only != 'true'
       - uses: actions/upload-artifact@v4
         if: always()
