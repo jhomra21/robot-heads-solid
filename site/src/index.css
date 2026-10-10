@@ -113,7 +113,8 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 .caption p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
 
 /* ── controls: a column of quiet labels ── */
-.controls { grid-column: 3; grid-row: 2; align-self: stretch; padding-top: clamp(16px, 4vh, 64px); z-index: 1; display: flex; flex-direction: column; gap: 30px; min-height: 0; overflow-y: auto; }
+/* overflow-y: auto also clips x, so the 4px inline padding gives the selected swatch's 3px ring room; the negative margin keeps the content where it was */
+.controls { grid-column: 3; grid-row: 2; align-self: stretch; padding-top: clamp(16px, 4vh, 64px); padding-inline: 4px; margin-inline: -4px; z-index: 1; display: flex; flex-direction: column; gap: 30px; min-height: 0; overflow-y: auto; }
 .control { display: grid; gap: 12px; }
 .control-head { display: flex; align-items: baseline; justify-content: space-between; }
 .control-label { font-size: 13px; color: var(--soft); }
@@ -187,9 +188,13 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   position: relative; display: block; width: 52px; height: calc(52px * var(--s));
   transition: height .2s var(--ease);
 }
+.dock-item[aria-label='Rectangle'] { --edge-offset: -.6465px; }
+.dock-item[aria-label='Square'] { --edge-offset: -.753px; }
+.dock-item[aria-label='Circle'] { --edge-offset: -.472px; }
+.dock-item[aria-label='Hexagon'] { --edge-offset: -.4715px; }
 .dock-icon {
   position: absolute; left: 0; top: 50%; width: 52px; height: 52px;
-  transform: translateY(calc(-50% - 4px)) scale(var(--s)); transform-origin: left center;
+  transform: translateY(calc(-50% - 4.5px + var(--edge-offset))) scale(var(--s)); transform-origin: left center;
   opacity: .45; transition: transform .2s var(--ease), opacity .2s;
 }
 /* the head leaves room in its canvas for hops, so the canvas overflows its slot */
@@ -224,7 +229,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   .state { flex-basis: 30%; }
   .dock { left: 50%; top: auto; bottom: 16px; transform: translateX(-50%); flex-direction: row; align-items: flex-end; }
   .dock-item { width: calc(52px * var(--s)); height: 52px; transition: width .2s var(--ease); }
-  .dock-icon { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, calc(-50% - 4px)) scale(var(--s)); transform-origin: center center; }
+  .dock-icon { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, calc(-50% - 4.5px + var(--edge-offset))) scale(var(--s)); transform-origin: center center; }
   .dock-tip { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
