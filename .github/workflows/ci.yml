@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-browser:
     runs-on: ubuntu-latest
@@ -13,16 +20,79 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # Keep the check name stable, but skip expensive validation for documentation-only edits.
+      - name: Determine validation scope
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Manual runs and unknown event shapes always run the full suite.
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base_sha="$BASE_SHA"
+          else
+            base_sha="$BEFORE_SHA"
+          fi
+
+          if [[ -z "$base_sha" || "$base_sha" =~ ^0+$ ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            if ! git fetch --no-tags --depth=1 origin "$base_sha"; then
+              echo "Could not fetch comparison commit; running full validation."
+              echo "docs_only=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          docs_only=true
+          changed=false
+          while IFS= read -r -d '' file; do
+            changed=true
+            case "$file" in
+              README.md|AGENTS.md|docs/*.md) ;;
+              *) docs_only=false; break ;;
+            esac
+          done < <(git diff --name-only -z "$base_sha" "$HEAD_SHA")
+
+          if [[ "$changed" != "true" ]]; then
+            docs_only=false
+          fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "Documentation-only change: $docs_only"
+
       - run: bun install --frozen-lockfile
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bun test tools/oxlint/anti-slop/tests/geometry-vocabulary.test.ts
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bun run lint
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bun run typecheck
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bun run build
+        if: steps.changes.outputs.docs_only != 'true'
       - run: cd site && bun run typecheck
+        if: steps.changes.outputs.docs_only != 'true'
       - run: cd site && bun run build
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bunx playwright install --with-deps chromium
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bunx playwright test
+        if: steps.changes.outputs.docs_only != 'true'
       - run: bun run e2e:consumer
+        if: steps.changes.outputs.docs_only != 'true'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
