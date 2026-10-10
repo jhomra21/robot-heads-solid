@@ -1,6 +1,6 @@
 {
   "name": "robot-heads-solid",
-  "version": "0.2.0-beta.0",
+  "version": "0.2.0-beta.1",
   "description": "Animated TV-headed robot avatars for Solid, drawn with Canvas 2D.",
   "keywords": [
     "solid",
@@ -99,7 +99,7 @@
     "prepublishOnly": "bun run check",
     "e2e": "playwright test",
     "e2e:consumer": "bun run build && bun run e2e:consumer:built",
-    "e2e:consumer:built": "bun pm pack --filename test-results/robot-heads-solid.tgz && bun pm pack --filename test-results/robot-heads-solid-solid2.tgz && cd e2e/consumer && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../consumer-solid2 && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts && bunx playwright test --config playwright.consumer-solid2.config.ts"
+    "e2e:consumer:built": "bun pm pack --filename test-results/consumer-solid1.tgz && bun pm pack --filename test-results/consumer-solid2.tgz && cd e2e/consumer && rm -f bun.lock && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../consumer-solid2 && rm -f bun.lock && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts && bunx playwright test --config playwright.consumer-solid2.config.ts"
   },
   "peerDependencies": {
     "solid-js": "^1.9.0 || ^2.0.0-rc.14",

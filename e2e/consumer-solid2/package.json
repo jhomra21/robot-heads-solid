@@ -6,7 +6,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "robot-heads-solid": "file:../../test-results/robot-heads-solid-solid2.tgz",
+    "robot-heads-solid": "file:../../test-results/consumer-solid2.tgz",
     "solid-js": "2.0.0-rc.14",
     "@solidjs/web": "2.0.0-rc.14"
   },

@@ -3,7 +3,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 test('consumer package installs the prerelease manifest from the packed tarball', () => {
   const manifest = JSON.parse(readFileSync('e2e/consumer/node_modules/robot-heads-solid/package.json', 'utf8'));
-  expect(manifest.version).toBe('0.2.0-beta.0');
+  const expectedVersion = JSON.parse(readFileSync('package.json', 'utf8')).version;
+  expect(manifest.version).toBe(expectedVersion);
   expect(manifest.publishConfig).toEqual({ access: 'public', tag: 'beta' });
 });
 
