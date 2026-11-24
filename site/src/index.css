@@ -114,7 +114,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 
 /* ── controls: a column of quiet labels ── */
 /* overflow-y: auto also clips x, so the 4px inline padding gives the selected swatch's 3px ring room; the negative margin keeps the content where it was */
-.controls { grid-column: 3; grid-row: 2; align-self: stretch; padding-top: clamp(16px, 4vh, 64px); padding-inline: 4px; margin-inline: -4px; z-index: 1; display: flex; flex-direction: column; gap: 30px; min-height: 0; overflow-y: auto; }
+.controls { grid-column: 3; grid-row: 2; align-self: stretch; padding-top: clamp(16px, 4vh, 64px); padding-inline: 4px; margin-inline: -4px; z-index: 1; display: flex; flex-direction: column; gap: clamp(18px, 2.6vh, 30px); min-height: 0; overflow-y: auto; }
 .control { display: grid; gap: 12px; }
 .control-head { display: flex; align-items: baseline; justify-content: space-between; }
 .control-label { font-size: 13px; color: var(--soft); }

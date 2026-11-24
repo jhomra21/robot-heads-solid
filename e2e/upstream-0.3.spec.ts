@@ -110,3 +110,11 @@ test('antenna control updates snippet, URL, reload state, and Reset', async ({ p
   await expect(page.getByRole('group', { name: 'Antenna' }).getByRole('button', { name: 'On' }))
     .toHaveAttribute('aria-pressed', 'true');
 });
+
+test('a common laptop window fits every control, snippet included, with the antenna off', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?noantenna&paused');
+  await expect(page.locator('.code')).toContainText('antenna={false}');
+  const fit = await page.locator('.controls').evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(fit.scroll, JSON.stringify(fit)).toBeLessThanOrEqual(fit.client);
+});
