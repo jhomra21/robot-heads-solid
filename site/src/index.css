@@ -108,7 +108,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 /* ── the stage: the head on its own, the state set large under it ── */
 /* centred on the whole screen; the controls sit over its right side */
 .stage { grid-column: 1 / -1; grid-row: 2; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.caption { text-align: center; margin-top: -8px; }
+.caption { text-align: center; margin-top: 36px; }
 .caption h1 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -0.025em; }
 .caption p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
 
@@ -162,8 +162,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
 /* ── every state, standing in a row ── */
 .states { grid-column: 1 / -1; grid-row: 3; display: flex; justify-content: center; align-items: flex-end; gap: clamp(4px, 1.6vw, 28px); min-width: 0; }
 .state { flex: 0 1 120px; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
-.state-head { display: block; width: 100%; max-width: 120px; opacity: .38; filter: saturate(.6); transition: opacity .25s, filter .25s, transform .25s var(--ease); }
-.state-head canvas { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+.state-head { display: grid; place-items: center; padding: 22px 0 14px; opacity: .38; filter: saturate(.6); transition: opacity .25s, filter .25s, transform .25s var(--ease); }
 /* on a light page fading reads as washed out: dim less, drain more colour */
 :root[data-theme='light'] .state-head { opacity: .55; filter: saturate(.25); }
 :root[data-theme='light'] .dock-icon { opacity: .6; }
@@ -188,19 +187,13 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   position: relative; display: block; width: 52px; height: calc(52px * var(--s));
   transition: height .2s var(--ease);
 }
-.dock-item[aria-label='Rectangle'] { --edge-offset: -.6465px; }
-.dock-item[aria-label='Square'] { --edge-offset: -.753px; }
-.dock-item[aria-label='Circle'] { --edge-offset: -.472px; }
-.dock-item[aria-label='Hexagon'] { --edge-offset: -.4715px; }
 .dock-icon {
   position: absolute; left: 0; top: 50%; width: 52px; height: 52px;
-  transform: translateY(calc(-50% - 4.5px + var(--edge-offset))) scale(var(--s)); transform-origin: left center;
+  transform: translateY(-50%) scale(var(--s)); transform-origin: left center;
   opacity: .45; transition: transform .2s var(--ease), opacity .2s;
 }
-/* the head leaves room in its canvas for hops, so the canvas overflows its slot */
-.dock-icon canvas { width: 72px !important; height: 72px !important; margin: -10px; }
-/* The wide rectangle reads larger than the other three at the same canvas size. */
-.dock-item[aria-label='Rectangle'] .dock-icon canvas { transform: scale(.92); }
+/* Preserve the former rectangle's optical scale while its layout box stays 52px. */
+.dock-item[aria-label='Rectangle'] .dock-icon > span { transform: scale(.92); }
 .dock-item:hover { --s: 1.4; }
 .dock-item:hover + .dock-item, .dock-item:has(+ .dock-item:hover) { --s: 1.15; }
 .dock-item:hover .dock-icon, .dock-item[aria-pressed='true'] .dock-icon { opacity: 1; }
@@ -229,7 +222,7 @@ button:focus-visible, label:focus-within { outline: 1.5px solid var(--soft); out
   .state { flex-basis: 30%; }
   .dock { left: 50%; top: auto; bottom: 16px; transform: translateX(-50%); flex-direction: row; align-items: flex-end; }
   .dock-item { width: calc(52px * var(--s)); height: 52px; transition: width .2s var(--ease); }
-  .dock-icon { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, calc(-50% - 4.5px + var(--edge-offset))) scale(var(--s)); transform-origin: center center; }
+  .dock-icon { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%) scale(var(--s)); transform-origin: center center; }
   .dock-tip { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

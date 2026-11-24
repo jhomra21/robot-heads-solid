@@ -79,25 +79,33 @@ The list is exported as `robotHeadStates`.
   model="tv"                // only "tv" is supported
   shape="rectangle"         // rectangle, square, circle or hexagon
   state="idle"              // what it is doing (above)
-  size={160}                // px
+  size={160}                // px, the box the robot rests in
   color="#2b49a3"           // the shell
   trimColor="#93a6c8"       // the ears and the antenna's collar
   screenColor="#e8f2ff"     // the LEDs
   speed={1}                 // multiplier on every animation
   paused={false}            // hold the state's still pose
   interactive               // follow the pointer, hop and spin on a click
+  antenna                   // the antenna's stem and light; off, the knob stays
   floorShadow               // the soft shadow under the head
   seed={0.3}                // 0–1, desyncs blinks and glances in a row of heads
 />
 ```
 
-Any other canvas attribute (`class`, `className`, `style`, `onClick`, `aria-label`, ...) is passed through to the `<canvas>`, and a `ref` reaches it too. State and appearance props update when Solid signals change. Invalid sizes and speeds fall back to their defaults. Positive sizes are clamped to 32–1024px and speeds to 8×.
+Any other attribute (`class`, `style`, `onClick`, `aria-label`, ...) goes on the element, and a `ref` reaches the `<canvas>` inside it. State and appearance props update when Solid signals change. Invalid sizes and speeds fall back to their defaults. Positive sizes are clamped to 32–1024px and speeds to 8×.
+
+## Sizing and layout
+
+`size` is the robot itself: the element is a `size` × `size` box with the robot at rest centred in it, filling it, antenna included. It lines up with text, sits in a flex row, and centres like an icon or an avatar would.
+
+Its motion is not part of that box. Hops, the antenna's glow and the floor's shadow draw past its edges, like a CSS `box-shadow`. They overflow without taking any room in your layout, and only the box takes clicks. Margins, flex and grid treat it as exactly `size` × `size`; a parent with `overflow: hidden` right around it can cut off a hop.
 
 ## Behaviour
 
 - **Pointer play.** With `interactive` on (the default), the head and eyes follow a nearby pointer, and a click makes it hop with a full spin and a happy face.
+- **Small sizes.** For avatars in a list, `antenna={false}` drops the antenna's stem and its light, keeping the knob on top, so the head itself fills more of the box. The square, circle and hexagon grow; the wide rectangle is already as big as its width allows.
 - **Reduced motion.** With `prefers-reduced-motion: reduce`, `paused`, or a speed of `0`, the still pose of the state is drawn instead of the animation.
-- **Accessible by default.** The canvas has `role="img"` and an `aria-label` naming the state ("Robot, thinking"); pass your own `aria-label` to override it.
+- **Accessible by default.** The element has `role="img"` and an `aria-label` naming the state ("Robot, thinking"); pass your own `aria-label` to override it.
 - **Cheap to run many.** Every head on the page shares one animation loop, which sleeps while the tab is hidden, and heads of the same shape and size share their baked textures.
 
 ## How it is drawn

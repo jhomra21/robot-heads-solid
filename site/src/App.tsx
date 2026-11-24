@@ -65,16 +65,16 @@ function useStageSize() {
       // the first viewport with the preview hint.
       const mastheadHeight = document.querySelector('.masthead')?.getBoundingClientRect().height ?? 88;
 
-      const shortScreen = w <= 480 && h <= 700
-        ? h - 392 - Math.max(0, mastheadHeight - 88)
-        : 400;
+      const available = w <= 480 && h <= 700
+        ? Math.min(w - 96, h - 392 - Math.max(0, mastheadHeight - 88))
+        : Math.min(w - 96, 260);
 
-      return Math.max(w <= 480 && h <= 700 ? 200 : 240, Math.min(w - 32, shortScreen, 400));
+      return Math.max(160, available);
     }
 
     const room = Math.min(w - 2 * (300 + 40 + 40), h - 300);
 
-    return Math.round(Math.max(260, Math.min(room, 520)));
+    return Math.round(Math.max(170, Math.min(room * 0.62, 330)));
   };
 
   const [size, setSize] = createSignal(measure());
@@ -93,6 +93,7 @@ function Dock(props: {
   onChange: (shape: RobotHeadShape) => void;
   colors: Colors;
   paused: boolean;
+  antenna: boolean;
 }) {
   return (
     <nav class="dock" aria-label="Shape">
@@ -100,8 +101,8 @@ function Dock(props: {
         <button class="dock-item" aria-pressed={shape === props.shape}
           aria-label={shapeLabels[shape]} onClick={() => props.onChange(shape)}>
           <span class="dock-icon">
-            <RobotHead shape={shape} size={128} interactive={false}
-              floorShadow={false} paused={props.paused} aria-hidden={true} {...props.colors} />
+            <RobotHead shape={shape} size={52} interactive={false}
+              floorShadow={false} antenna={props.antenna} paused={props.paused} aria-hidden={true} {...props.colors} />
           </span>
           <span class="dock-tip">{shapeLabels[shape]}</span>
         </button>
@@ -267,6 +268,7 @@ export default function App(): JSX.Element {
 
   const [colors, setColors] = createSignal<Colors>(DEFAULTS);
   const [speed, setSpeed] = createSignal(1);
+  const [antenna, setAntenna] = createSignal(!query().has('noantenna'));
   const [paused, setPaused] = createSignal(query().has('paused') && query().get('paused') !== 'false');
   const [copied, copy] = useCopy();
   const [theme, toggleTheme] = useTheme();
@@ -302,6 +304,7 @@ export default function App(): JSX.Element {
       setState(robotHeadStates.find((value) => value === params.get('state')) ?? 'idle');
       setShapeState(robotHeadShapes.find((value) => value === params.get('shape')) ?? 'rectangle');
       setPaused(params.has('paused') && params.get('paused') !== 'false');
+      setAntenna(!params.has('noantenna'));
     };
 
     window.addEventListener('popstate', restore);
@@ -312,7 +315,7 @@ export default function App(): JSX.Element {
     colors().color !== DEFAULTS.color ||
     colors().trimColor !== DEFAULTS.trimColor ||
     colors().screenColor !== DEFAULTS.screenColor ||
-    speed() !== 1 || paused(),
+    speed() !== 1 || paused() || !antenna(),
   );
 
   const lines = createMemo<PropLine[]>(() => [
@@ -322,6 +325,7 @@ export default function App(): JSX.Element {
     { key: 'trimColor', name: 'trimColor', value: colors().trimColor, on: colors().trimColor !== DEFAULTS.trimColor },
     { key: 'screenColor', name: 'screenColor', value: colors().screenColor, on: colors().screenColor !== DEFAULTS.screenColor },
     { key: 'speed', name: 'speed', value: speed(), on: speed() !== 1 },
+    { key: 'antenna', name: 'antenna', value: antenna(), on: !antenna() },
     { key: 'paused', name: 'paused', value: true, on: paused() },
   ]);
 
@@ -331,7 +335,7 @@ export default function App(): JSX.Element {
 
   return (
     <div class="app">
-      <Dock shape={shape()} onChange={setShape} colors={colors()} paused={paused()} />
+      <Dock shape={shape()} onChange={setShape} colors={colors()} paused={paused()} antenna={antenna()} />
 
       <header class="masthead">
         <div class="byline">
@@ -366,7 +370,7 @@ export default function App(): JSX.Element {
 
       <main class="stage" aria-label="Preview">
         <RobotHead shape={shape()} state={state()} size={size()}
-          paused={paused()} speed={speed()} {...colors()} />
+          paused={paused()} speed={speed()} antenna={antenna()} {...colors()} />
         <div class="caption">
           <h1 class="font-bold">{title(state())}</h1>
           <p>{stateHints[state()]}</p>
@@ -378,6 +382,18 @@ export default function App(): JSX.Element {
           <Swatches name={key} value={colors()[key]}
             onChange={(value) => setColors((current) => ({ ...current, [key]: value }))} />
         ))}
+        <div class="control">
+          <div class="control-head"><span class="control-label">Antenna</span></div>
+          <div class="segments" role="group" aria-label="Antenna">
+            {[true, false].map((value) => (
+              <button class="segment" aria-pressed={value === antenna()}
+                onClick={() => {
+                  setAntenna(value);
+                  updateURL('noantenna', value ? null : '');
+                }}>{value ? 'On' : 'Off'}</button>
+            ))}
+          </div>
+        </div>
         <div class="control">
           <div class="control-head">
             <span class="control-label">Speed</span>
@@ -398,7 +414,7 @@ export default function App(): JSX.Element {
             <span class="control-actions">
               <button class="text-button reset" aria-hidden={!changed()}
                 tabIndex={changed() ? 0 : -1}
-                onClick={() => { setColors(DEFAULTS); setSpeed(1); setPlayback(false); }}>Reset</button>
+                onClick={() => { setColors(DEFAULTS); setSpeed(1); setAntenna(true); updateURL('noantenna', null); setPlayback(false); }}>Reset</button>
               <button class="text-button" onClick={() => copy('snippet', snippet())}>
                 {copied() === 'snippet' ? 'Copied' : 'Copy'}
               </button>
@@ -412,8 +428,8 @@ export default function App(): JSX.Element {
         {robotHeadStates.map((value) => (
           <button class="state" aria-pressed={value === state()} onClick={() => setSelectedState(value)}>
             <span class="state-head">
-              <RobotHead shape={shape()} state={value} size={120} paused={paused()}
-                speed={speed()} interactive={false} aria-hidden={true} {...colors()} />
+              <RobotHead shape={shape()} state={value} size={72} paused={paused()}
+                speed={speed()} antenna={antenna()} interactive={false} aria-hidden={true} {...colors()} />
             </span>
             <span class="state-name">{title(value)}</span>
           </button>

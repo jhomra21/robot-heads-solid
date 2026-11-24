@@ -1,10 +1,10 @@
-import { createEffect, createSignal, createUniqueId, onCleanup, onMount, splitProps } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, onCleanup, onMount, splitProps } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { robotHeadShapes, robotHeadStates } from './types';
 import type { RobotHeadProps, RobotHeadShape, RobotHeadState } from './types';
 import { getShape } from './tv/geometry';
 import { RobotSim, restPose } from './tv/sim';
-import { RobotRenderer, type Palette } from './tv/render';
+import { frameFor, RobotRenderer, type Palette } from './tv/render';
 import { linear } from './tv/light';
 import { parseColor } from './color';
 import { subscribe, pointer } from './ticker';
@@ -35,7 +35,7 @@ const validState = (value: RobotHeadState | undefined): RobotHeadState =>
 const validShape = (value: RobotHeadShape | undefined): RobotHeadShape =>
   value && robotHeadShapes.includes(value) ? value : 'rectangle';
 
-function isClickCallback(handler: RobotHeadProps['onClick']): handler is JSX.EventHandler<HTMLCanvasElement, MouseEvent> {
+function isClickCallback(handler: RobotHeadProps['onClick']): handler is JSX.EventHandler<HTMLSpanElement, MouseEvent> {
   return typeof handler === 'function';
 }
 
@@ -57,10 +57,11 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
 
   const [local, rest] = splitProps(props, [
     'model', 'shape', 'state', 'size', 'color', 'trimColor', 'screenColor',
-    'speed', 'paused', 'interactive', 'floorShadow', 'seed',
+    'speed', 'paused', 'interactive', 'floorShadow', 'antenna', 'seed',
     'class', 'className', 'style', 'onClick', 'aria-label', 'ref',
   ]);
 
+  let root!: HTMLSpanElement;
   let canvas!: HTMLCanvasElement;
   let renderer: RobotRenderer | undefined;
 
@@ -69,6 +70,8 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
 
   const speed = () => Number.isFinite(local.speed) && (local.speed ?? -1) >= 0
     ? Math.min(local.speed!, 8) : 1;
+
+  const frame = createMemo(() => frameFor(getShape(validShape(local.shape)), local.antenna ?? true, size()));
 
   const sim = new RobotSim(
     Number.isFinite(local.seed) ? Math.min(1, Math.max(0, local.seed!)) : hashSeed(id),
@@ -79,7 +82,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
   const [visible, setVisible] = createSignal(true);
   onMount(() => {
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
-    observer.observe(canvas);
+    observer.observe(root);
     onCleanup(() => observer.disconnect());
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReduceMotion(query.matches);
@@ -91,7 +94,6 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
   createEffect(() => {
     const state = validState(local.state);
     const shape = getShape(validShape(local.shape));
-    const dimension = size();
 
     const colors = palette(
       local.color ?? '#2b49a3',
@@ -102,6 +104,8 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     const rate = speed();
     const interactive = local.interactive ?? true;
     const floorShadow = local.floorShadow ?? true;
+    const antenna = local.antenna ?? true;
+    const currentFrame = frame();
     const still = (local.paused ?? false) || !(rate > 0) || reduceMotion();
 
     sim.setState(state);
@@ -109,11 +113,12 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     const paint = (animated: boolean) => {
       if (!canvas) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const pixels = Math.round(dimension * dpr);
+      const width = Math.round((currentFrame.box + currentFrame.padSide * 2) * dpr);
+      const height = Math.round((currentFrame.box + currentFrame.padTop + currentFrame.padBottom) * dpr);
 
-      if (canvas.width !== pixels || canvas.height !== pixels) {
-        canvas.width = pixels;
-        canvas.height = pixels;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
       }
 
       const ctx = canvas.getContext('2d');
@@ -121,10 +126,10 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
       if (!ctx) return;
       renderer ??= new RobotRenderer();
       renderer.draw(
-        ctx, pixels,
+        ctx, currentFrame, dpr,
         animated ? sim.pose : restPose(state),
         animated ? sim : null,
-        state, shape, colors, { floorShadow },
+        state, shape, colors, { floorShadow, antenna },
       );
     };
 
@@ -136,9 +141,10 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
 
     const unsubscribe = subscribe((dt) => {
       if (interactive && Number.isFinite(pointer.x)) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = root.getBoundingClientRect();
+        const currentFrame = frame();
         const dx = pointer.x - (rect.left + rect.width / 2);
-        const dy = pointer.y - (rect.top + rect.height * 0.56);
+        const dy = pointer.y - (rect.top + currentFrame.cy - currentFrame.padTop);
         sim.pointer = Math.hypot(dx, dy) < 700 ? { x: dx, y: dy } : null;
       } else {
         sim.pointer = null;
@@ -151,7 +157,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     onCleanup(unsubscribe);
   });
 
-  const handleClick: JSX.EventHandler<HTMLCanvasElement, MouseEvent> = (event) => {
+  const handleClick: JSX.EventHandler<HTMLSpanElement, MouseEvent> = (event) => {
     if ((local.interactive ?? true) && !(local.paused ?? false) && speed() > 0 && !reduceMotion()) {
       sim.poke();
     }
@@ -172,23 +178,37 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     }
   };
 
+  const setRoot = (element: HTMLSpanElement) => { root = element; };
+
   return (
-    <canvas
-      ref={setRef}
+    <span
+      ref={setRoot}
       role="img"
       aria-label={local['aria-label'] ?? `Robot, ${validState(local.state)}`}
       class={local.class ?? local.className}
       style={isStyleText(local.style)
-        ? `width:${size()}px;height:${size()}px;display:block;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
+        ? `position:relative;display:block;flex:none;width:${size()}px;height:${size()}px;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
         : {
+            position: 'relative',
             width: `${size()}px`,
             height: `${size()}px`,
             display: 'block',
+            flex: 'none',
             cursor: local.interactive === false ? undefined : 'pointer',
             ...local.style,
           }}
       onClick={handleClick}
       {...rest}
-    />
+    >
+      <canvas ref={setRef} aria-hidden="true" style={{
+        position: 'absolute',
+        left: `${-frame().padSide}px`,
+        top: `${-frame().padTop}px`,
+        width: `${frame().box + 2 * frame().padSide}px`,
+        height: `${frame().box + frame().padTop + frame().padBottom}px`,
+        display: 'block',
+        'pointer-events': 'none',
+      }} />
+    </span>
   );
 }

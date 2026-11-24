@@ -16,7 +16,7 @@ export default function HydrationApp() {
       ref={[
         (element) => {
           originalRef = element;
-          setOriginalRefMatches(originalRef === document.querySelector('[data-hydration-head="head"]'));
+          setOriginalRefMatches(originalRef === document.querySelector('[data-hydration-head="head"] canvas'));
         },
         [
           () => setRefCallbacks((count) => count + 1),
@@ -33,8 +33,8 @@ export default function HydrationApp() {
     <output id="hydration-clicks">{clicks()}</output>
     <output id="hydration-state">{state()}</output>
     <button id="hydration-state" onClick={() => {
-      const canvas = document.querySelector<HTMLCanvasElement>('[data-hydration-head="head"]');
-      canvas?.click();
+      const root = document.querySelector<HTMLElement>('[data-hydration-head="head"]');
+      root?.click();
     }}>Click hydrated canvas</button>
     <output id="hydration-ref-original">{String(originalRefMatches())}</output>
     <output id="hydration-ref-callbacks">{refCallbacks()}</output>
