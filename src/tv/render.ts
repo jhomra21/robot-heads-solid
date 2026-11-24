@@ -21,6 +21,7 @@ export interface Palette {
 
 export interface RenderOptions {
   floorShadow: boolean;
+  antenna: boolean;
 }
 
 type RGB = [number, number, number];
@@ -53,11 +54,51 @@ const HALF: V3 = (() => {
   return [KEY[0] / l, KEY[1] / l, (KEY[2] + 1) / l];
 })();
 
-/* the room a head needs round it, in head units: the antenna up to its
-   bulb, the bulb's glow past that, the highest hop (with the stretch and
-   the antenna's whip as it lands), the floor's shadow; and a margin, as a
-   share of the canvas, so nothing ever touches the edge */
-const HEAD_TRAVEL = { antenna: 0.028 + HEAD.stem + HEAD.ball * 1.8, glow: 0.18, hop: 0.3, shadow: 0.22, margin: 0.02 };
+/* the head's reach, in head units: the antenna up to the top of its bulb,
+   the knob alone, the ears past the sides; then the room motion needs past
+   that: the bulb's glow, the highest hop (a click), the body rising past it
+   as it stretches and leans in (with an antenna, its own room covers that),
+   the floor's shadow, a turn or a lean past the ears */
+const HEAD_TRAVEL = { antenna: 0.028 + HEAD.stem + HEAD.ball * 1.8, knob: 0.035, ear: 0.105, glow: 0.18, hop: 0.3, overshoot: 0.13, shadow: 0.22, side: 0.12 };
+
+/* the resting robot fills its box but for this inset, as a share of the box */
+const BOX_INSET = 0.05;
+
+/**
+ * Where a head sits, in CSS px. The element is a `box` × `box` square
+ * holding the robot at rest, centred and filling it; the canvas reaches
+ * past it by `pad*` on each side, room for hops, the glow and the floor's
+ * shadow that takes no part in layout. `cx`, `cy` place the centre of the
+ * resting head in the canvas; `unit` is one head unit.
+ */
+export interface Frame {
+  box: number;
+  padTop: number;
+  padBottom: number;
+  padSide: number;
+  unit: number;
+  cx: number;
+  cy: number;
+}
+
+export function frameFor(shape: Shape, antenna: boolean, box: number): Frame {
+  const top = antenna ? HEAD_TRAVEL.antenna : HEAD_TRAVEL.knob;
+  const tall = 2 * shape.hy + top;
+  const wide = 2 * (shape.earX + HEAD_TRAVEL.ear);
+  const inner = box * (1 - 2 * BOX_INSET);
+  const unit = Math.min(inner / tall, inner / wide);
+  const above = (box - tall * unit) / 2;
+  const centreY = above + (shape.hy + top) * unit;
+  const reachUp = (antenna ? HEAD_TRAVEL.glow + HEAD_TRAVEL.hop : HEAD_TRAVEL.hop + HEAD_TRAVEL.overshoot) * unit;
+  const reachDown = centreY + (shape.hy + HEAD_TRAVEL.shadow) * unit;
+  const reachSide = box / 2 + (shape.earX + HEAD_TRAVEL.ear + HEAD_TRAVEL.side) * unit;
+  const padTop = Math.ceil(Math.max(0, reachUp - above) + 1);
+  const padBottom = Math.ceil(Math.max(0, reachDown - box) + 1);
+  const padSide = Math.ceil(Math.max(0, reachSide - box) + 1);
+
+  /* whole px, and a pixel spare, so nothing ever touches the canvas edge */
+  return { box, padTop, padBottom, padSide, unit, cx: padSide + box / 2, cy: padTop + centreY };
+}
 
 /* how far the screen image reaches past the glass, so the recess never shows a gap */
 const SCREEN_OVER = 0.035;
@@ -537,14 +578,14 @@ export class RobotRenderer {
     ctx.drawImage(this.glass!, 0, 0);
   }
 
-  private drawFloorShadow(ctx: CanvasRenderingContext2D, size: number, pose: RobotPose, rest: number, shape: Shape, U: number, floorShadow: boolean) {
+  private drawFloorShadow(ctx: CanvasRenderingContext2D, cx: number, pose: RobotPose, rest: number, shape: Shape, U: number, floorShadow: boolean) {
     /* the floor's shadow, smaller and fainter the higher the head is */
     if (floorShadow) {
       const up = Math.max(0, pose.lift);
       const fy = rest + (shape.hy + 0.11) * U;
       const rx = U * shape.hx * (1 - up * 0.9) * pose.sx;
       ctx.save();
-      ctx.translate(size / 2 + pose.x * U, fy);
+      ctx.translate(cx + pose.x * U, fy);
       ctx.scale(1, 0.16);
       const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
       const a = 0.55 * Math.max(0, 1 - up * 1.6);
@@ -574,14 +615,9 @@ export class RobotRenderer {
 
   }
 
-  draw(ctx: CanvasRenderingContext2D, size: number, pose: RobotPose, sim: RobotSim | null, state: RobotHeadState, shape: Shape, palette: Palette, opts: RenderOptions) {
-    /* every shape fits the same box: antenna to chin, with room to hop */
-    /* Fit the whole travel, not just the rest pose: above the head the
-       antenna and its bulb's glow at the top of the highest hop (a click),
-       below it the floor's shadow. In head units. */
-    const ABOVE = HEAD_TRAVEL.antenna + HEAD_TRAVEL.glow + HEAD_TRAVEL.hop;
-    const BELOW = HEAD_TRAVEL.shadow;
-    const U = Math.min(size * 0.6, (size * (1 - 2 * HEAD_TRAVEL.margin)) / (2 * shape.hy + ABOVE + BELOW));
+  /** Draw a frame; `frame` is in CSS px, the canvas in device px (`dpr` per CSS px). */
+  draw(ctx: CanvasRenderingContext2D, frame: Frame, dpr: number, pose: RobotPose, sim: RobotSim | null, state: RobotHeadState, shape: Shape, palette: Palette, opts: RenderOptions) {
+    const U = frame.unit * dpr;
     const PLATE = plateOf(shape);
     const GLASS = glassOf(shape);
     const SCREEN = screenOf(shape);
@@ -605,9 +641,8 @@ export class RobotRenderer {
     const layer = this.layer.getContext('2d')!;
 
     const R = rotation(pose.yaw, pose.pitch, pose.roll);
-    const cx = size / 2 + pose.x * U;
-    /* the rest height that puts the top of that travel just inside the canvas */
-    const rest = size * HEAD_TRAVEL.margin + (shape.hy + ABOVE) * U;
+    const cx = frame.cx * dpr + pose.x * U;
+    const rest = frame.cy * dpr;
     const cy = rest - pose.lift * U;
     const by = cy + shape.hy * U;
 
@@ -625,7 +660,7 @@ export class RobotRenderer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    this.drawFloorShadow(ctx, size, pose, rest, shape, U, opts.floorShadow);
+    this.drawFloorShadow(ctx, frame.cx * dpr, pose, rest, shape, U, opts.floorShadow);
 
     const { body, earL, earR, collar } = this.meshes!;
     const earLz = rotate(R, -shape.earX - 0.05, HEAD.earY, 0)[2];
@@ -678,7 +713,7 @@ export class RobotRenderer {
       }
     };
 
-    const antenna = () => this.drawAntenna(ctx, P, U, pose, palette, sim, shown, lightNow, collar);
+    const antenna = () => this.drawAntenna(ctx, P, U, pose, palette, sim, shown, lightNow, collar, opts.antenna);
 
     if (antennaBehind) antenna();
 
@@ -784,6 +819,7 @@ export class RobotRenderer {
     shown: RobotHeadState,
     lightNow: (typeof LIGHTS)[RobotHeadState],
     collar: Mesh,
+    stem: boolean,
   ) {
     /* the collar, lit like the ears */
     const R = rotation(pose.yaw, pose.pitch, pose.roll);
@@ -818,6 +854,8 @@ export class RobotRenderer {
       ctx.fill();
       ctx.stroke();
     }
+
+    if (!stem) return;
 
     /* the stem bends toward its tip; the ball rides on the end */
     const top = -this.shape!.hy - 0.028;

@@ -13,23 +13,39 @@ test('packed tarball loads and reacts in an external Solid 1 application', async
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('http://127.0.0.1:4175/');
-  const canvas = page.locator('canvas[data-consumer="true"]');
-  await expect(canvas).toHaveAttribute('aria-label', 'consumer idle');
+  const root = page.locator('span[data-consumer="true"]');
+  const canvas = root.locator('canvas');
+  await expect(root).toHaveAttribute('aria-label', 'consumer idle');
+  await expect(root).toHaveJSProperty('tagName', 'SPAN');
   await expect(page.locator('#ref')).toHaveText('CANVAS');
   const before = await canvas.screenshot();
   await page.getByRole('button', { name: 'Update' }).click();
-  await expect(canvas).toHaveAttribute('aria-label', 'consumer error');
+  await expect(root).toHaveAttribute('aria-label', 'consumer error');
   const after = await canvas.screenshot();
   expect(before.equals(after)).toBe(false);
   await page.getByRole('button', { name: 'Toggle pause' }).click();
   await page.waitForTimeout(120);
   await page.getByRole('button', { name: 'Invalid dimensions and speed' }).click();
   await page.waitForTimeout(120);
-  await canvas.scrollIntoViewIfNeeded();
-  await expect(canvas).toHaveCSS('width', '160px');
-  const pixels = Math.round(160 * Math.min(2, await page.evaluate(() => window.devicePixelRatio || 1)));
+  await root.scrollIntoViewIfNeeded();
+  await expect(root).toHaveCSS('width', '160px');
+  const cssWidth = Number.parseFloat(await canvas.evaluate((element) => getComputedStyle(element).width));
+  expect(cssWidth).toBeGreaterThan(160);
+
+  const pixels = await canvas.evaluate((element) => Math.round(
+    element.getBoundingClientRect().width * Math.min(2, window.devicePixelRatio || 1),
+  ));
+
   await expect(canvas).toHaveJSProperty('width', pixels);
-  await expect(canvas).toHaveJSProperty('height', pixels);
+
+  const canvasHeight = await canvas.evaluate((element) => Math.round(
+    element.getBoundingClientRect().height * Math.min(2, window.devicePixelRatio || 1),
+  ));
+
+  await expect(canvas).toHaveJSProperty('height', canvasHeight);
+
+  await root.click();
+  await expect(page.locator('#clicks')).toHaveText('1');
   mkdirSync('test-results', { recursive: true });
   await canvas.screenshot({ path: 'test-results/consumer-solid1-after.png' });
   writeFileSync('test-results/consumer-solid1-browser.json',
@@ -41,13 +57,13 @@ test('packed SSR canvas survives hydration and replays a click queued before hyd
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://127.0.0.1:4175/hydration.html');
-  const canvas = page.locator('[data-hydration="canvas"]');
-  await expect(canvas).toHaveAttribute('aria-label', 'Robot, idle');
+  const root = page.locator('[data-hydration="canvas"]');
+  await expect(root).toHaveAttribute('aria-label', 'Robot, idle');
   await page.waitForFunction(() => Reflect.has(window, 'startHydration'));
   await page.evaluate(() => {
-    Reflect.set(window, 'serverCanvas', document.querySelector('[data-hydration="canvas"]'));
+    Reflect.set(window, 'serverCanvas', document.querySelector('[data-hydration="canvas"] canvas'));
   });
-  await canvas.click();
+  await root.click();
   await expect(page.locator('#queued-clicks')).toHaveText('0');
 
   // SAFETY: generateHydrationScript installs _$HY with an events array before hydration.
@@ -61,7 +77,7 @@ test('packed SSR canvas survives hydration and replays a click queued before hyd
   // SAFETY: the test stored the SSR canvas as serverCanvas before hydration.
   const reused = await page.evaluate(() =>
     (window as Window & { serverCanvas: HTMLCanvasElement }).serverCanvas ===
-    document.querySelector('[data-hydration="canvas"]'));
+    document.querySelector('[data-hydration="canvas"] canvas'));
 
   expect(reused).toBe(true);
   mkdirSync('test-results', { recursive: true });

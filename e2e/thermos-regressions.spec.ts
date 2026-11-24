@@ -135,7 +135,19 @@ test('many viewport resizes keep shared canvas textures bounded', async ({ page 
 
   for (let height = 660; height <= 800; height += 7) {
     await page.setViewportSize({ width: 1350, height });
-    await expect(page.locator('main.stage canvas')).toHaveJSProperty('width', height - 300);
+    const root = page.locator('main.stage [role="img"]');
+    const canvas = root.locator('canvas');
+    await expect(root).toHaveCSS('width', `${Math.round(Math.max(170, Math.min((height - 300) * 0.62, 330)))}px`);
+
+    const dimensions = await canvas.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+      return { width: Math.round(rect.width * dpr), height: Math.round(rect.height * dpr) };
+    });
+
+    await expect(canvas).toHaveJSProperty('width', dimensions.width);
+    await expect(canvas).toHaveJSProperty('height', dimensions.height);
   }
 
   const path = new URL('../src/tv/render.ts', import.meta.url).pathname;

@@ -5,8 +5,12 @@ export { robotHeadShapes, robotHeadStates } from './domain-types';
 
 export type { RobotHeadModel, RobotHeadShape, RobotHeadState } from './domain-types';
 
-/** Canvas attributes are forwarded to the underlying canvas. */
-export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvasElement>, 'color'> {
+type CanvasRef = HTMLCanvasElement | ((element: HTMLCanvasElement) => void) |
+  { current: HTMLCanvasElement | undefined } | CanvasRef[];
+
+/** Element attributes go on the size × size span; ref receives its canvas. */
+export interface RobotHeadProps extends Omit<JSX.HTMLAttributes<HTMLSpanElement>, 'color' | 'ref'> {
+  ref?: CanvasRef;
   model?: RobotHeadModel;
   shape?: RobotHeadShape;
   state?: RobotHeadState;
@@ -17,6 +21,12 @@ export interface RobotHeadProps extends Omit<JSX.CanvasHTMLAttributes<HTMLCanvas
   speed?: number;
   paused?: boolean;
   interactive?: boolean;
+  /**
+   * Show the antenna's stem and its light. Default `true`. Turn it off for
+   * small sizes, such as avatars in a list: the knob on top stays, and the
+   * head grows to fill the room the antenna took.
+   */
+  antenna?: boolean;
   floorShadow?: boolean;
   /** 0–1. Offsets blinks and glances across a row of heads. */
   seed?: number;

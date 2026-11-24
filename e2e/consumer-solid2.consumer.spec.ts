@@ -133,11 +133,13 @@ test('published Solid 2 entrypoint mounts and reacts across all states', async (
     }
   });
   await page.goto('http://127.0.0.1:4176/');
-  const canvas = page.locator('canvas[data-solid2="head"]');
-  await expect(canvas).toHaveAttribute('aria-label', 'Robot, idle');
-  await expect(page.locator('canvas[data-matrix]')).toHaveCount(36);
+  const root = page.locator('span[data-solid2="head"]');
+  const canvas = root.locator('canvas');
+  await expect(root).toHaveAttribute('aria-label', 'Robot, idle');
+  await expect(root).toHaveJSProperty('tagName', 'SPAN');
+  await expect(page.locator('span[data-matrix] canvas')).toHaveCount(36);
 
-  const paintedVariantCount = await page.locator('canvas[data-matrix]').evaluateAll((canvases) =>
+  const paintedVariantCount = await page.locator('span[data-matrix] canvas').evaluateAll((canvases) =>
     canvases.filter((canvas) => {
       const context = canvas.getContext('2d');
 
@@ -160,15 +162,15 @@ test('published Solid 2 entrypoint mounts and reacts across all states', async (
   for (const state of ['thinking', 'searching', 'listening', 'speaking', 'working', 'happy', 'error', 'sleeping', 'idle']) {
     await page.getByRole('button', { name: 'Next state' }).click();
     await expect(page.locator('#state')).toHaveText(state);
-    await expect(canvas).toHaveAttribute('aria-label', `Robot, ${state}`);
+    await expect(root).toHaveAttribute('aria-label', `Robot, ${state}`);
     stateScreens.push((await canvas.screenshot()).toString('base64'));
   }
 
   expect(new Set(stateScreens).size).toBeGreaterThan(1);
 
-  await canvas.click();
+  await root.click();
   await expect(page.locator('#clicks')).toHaveText('1');
-  await page.locator('canvas[data-array-ref="head"]').click();
+  await page.locator('span[data-array-ref="head"]').click();
   await expect(page.locator('#array-clicks')).toHaveText('1');
   await page.mouse.move(500, 300);
   await page.getByRole('button', { name: 'Toggle pause' }).click();
@@ -190,7 +192,7 @@ test('published Solid 2 entrypoint mounts and reacts across all states', async (
   expect(activeLifecycle.listeners['document:pointermove']).toBe(1);
 
   await page.getByRole('button', { name: 'Toggle mount' }).click();
-  await expect(page.locator('canvas[data-solid2="head"]')).toHaveCount(0);
+  await expect(page.locator('span[data-solid2="head"]')).toHaveCount(0);
 
   const disposedLifecycle = await page.evaluate(() => {
     const { raf, observers, mediaListeners, listeners } = window.__solid2Lifecycle;
@@ -207,13 +209,23 @@ test('published Solid 2 entrypoint mounts and reacts across all states', async (
   expect(disposedLifecycle.mediaListeners).toBe(activeLifecycle.mediaListeners - 1);
   await page.getByRole('button', { name: 'Toggle mount' }).click();
   await page.getByRole('button', { name: 'Final state' }).click();
-  const remounted = page.locator('canvas[data-solid2="head"]');
+  const remounted = page.locator('span[data-solid2="head"]');
+  const remountedCanvas = remounted.locator('canvas');
   await expect(remounted).toHaveAttribute('aria-label', 'Robot, idle');
   await expect(remounted).toHaveCSS('width', '160px');
-  await expect(remounted).toHaveJSProperty('width', Math.round(160 * Math.min(2, await page.evaluate(() => devicePixelRatio || 1))));
+
+  const backing = await remountedCanvas.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+    return { width: Math.round(rect.width * dpr), height: Math.round(rect.height * dpr) };
+  });
+
+  await expect(remountedCanvas).toHaveJSProperty('width', backing.width);
+  await expect(remountedCanvas).toHaveJSProperty('height', backing.height);
 
   mkdirSync('test-results', { recursive: true });
-  await remounted.screenshot({ path: 'test-results/consumer-solid2-after.png' });
+  await remountedCanvas.screenshot({ path: 'test-results/consumer-solid2-after.png' });
   const manifest = JSON.parse(readFileSync('e2e/consumer-solid2/node_modules/robot-heads-solid/package.json', 'utf8'));
   writeFileSync('test-results/consumer-solid2-browser.json', JSON.stringify({
     solid: manifest.dependencies?.['solid-js'] ?? manifest.peerDependencies['solid-js'],
@@ -248,13 +260,13 @@ test('published Solid 2 hydration replays an early click and preserves nested na
     body: `<!doctype html><html><head>${script}</head><body><div id="root">${html}</div><script>setTimeout(() => import('/src/hydrate-client.tsx'), 2000)</script></body></html>`,
   }));
   await page.goto('http://127.0.0.1:4176/hydration');
-  const canvas = page.locator('[data-hydration-head="head"]');
+  const root = page.locator('span[data-hydration-head="head"]');
   await page.waitForTimeout(50);
-  await canvas.click();
+  await root.click();
   await page.waitForFunction(() => document.documentElement.dataset.solid2Hydrated === 'true');
   await expect(page.locator('#hydration-clicks')).toHaveText('1');
   await expect(page.locator('output#hydration-state')).toHaveText('thinking');
-  await expect(canvas).toHaveAttribute('aria-label', 'Robot, thinking');
+  await expect(root).toHaveAttribute('aria-label', 'Robot, thinking');
   await expect(page.locator('#hydration-ref-original')).toHaveText('true');
   await expect(page.locator('#hydration-ref-callbacks')).toHaveText('2');
   await expect(errors).toEqual([]);

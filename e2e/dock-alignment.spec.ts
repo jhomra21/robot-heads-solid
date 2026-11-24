@@ -56,6 +56,7 @@ test('dock shapes stay centered and contained on phones and desktop', async ({ p
 
               const bodyTop = occupiedRows.findIndex((count) => count >= width * 0.2);
               const rect = canvas.getBoundingClientRect();
+              const rootRect = canvas.parentElement!.getBoundingClientRect();
               const slot = button.getBoundingClientRect();
 
               const head = {
@@ -70,10 +71,10 @@ test('dock shapes stay centered and contained on phones and desktop', async ({ p
                 shape: button.getAttribute('aria-label'),
                 slot: { left: slot.left, right: slot.right, top: slot.top, bottom: slot.bottom },
                 head,
-                topGap: head.top - pill.top,
-                bottomGap: pill.bottom - head.bottom,
-                centerOffsetX: (head.left + head.right - slot.left - slot.right) / 2,
-                centerOffsetY: (head.top + head.bottom - slot.top - slot.bottom) / 2,
+                topGap: rootRect.top - pill.top,
+                bottomGap: pill.bottom - rootRect.bottom,
+                centerOffsetX: (rootRect.left + rootRect.right - slot.left - slot.right) / 2,
+                centerOffsetY: (rootRect.top + rootRect.bottom - slot.top - slot.bottom) / 2,
                 bodyHeight: head.bottom - head.bodyTop,
                 clipped: minX === 0 || maxX === width - 1 || minY === 0 || maxY === height - 1,
               };

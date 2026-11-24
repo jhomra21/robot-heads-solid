@@ -4,5 +4,6 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-06",
   "assets": { "not_found_handling": "single-page-application" },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "previews": {}
 }

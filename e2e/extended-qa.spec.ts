@@ -120,13 +120,13 @@ test('appearance, pause, animation, speed, pointer, and click actually update pi
   expect(slow.hash, 'speed changes did not redraw').not.toBe(fast.hash);
   await snap(page, 'speed-fast');
 
-  // Move pointer on the stage, then click its canvas; preserve independent samples.
+  // Pointer tracking and clicks belong to the size-sized root span.
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.locator('nav[aria-label="State"]').getByRole('button', { name: 'Idle', exact: true }).click();
   await page.getByRole('button', { name: 'Play', exact: true }).click();
-  const canvas = page.locator('main.stage canvas');
-  await canvas.scrollIntoViewIfNeeded();
-  const box = (await canvas.boundingBox())!;
+  const root = page.locator('main.stage [role="img"]');
+  await root.scrollIntoViewIfNeeded();
+  const box = (await root.boundingBox())!;
   await page.mouse.move(box.x - 100, box.y + box.height / 2);
   await page.waitForTimeout(200);
   const pointerLeft = await pixels(page);
@@ -137,7 +137,7 @@ test('appearance, pause, animation, speed, pointer, and click actually update pi
   expect(pointerLeft.hash, 'pointer did not change canvas').not.toBe(pointerRight.hash);
   await snap(page, 'pointer-right');
   const beforeClick = await pixels(page);
-  await canvas.click();
+  await root.click();
   await page.waitForTimeout(130);
   const afterClick = await pixels(page);
   data.click = { before: beforeClick, after: afterClick };

@@ -1,10 +1,10 @@
-import { createSignal, createTrackedEffect, createUniqueId, onSettled, omit } from 'solid-js';
+import { createEffect, createMemo, createSignal, createUniqueId, onSettled, omit } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { robotHeadShapes, robotHeadStates } from './types';
 import type { RobotHeadProps, RobotHeadShape, RobotHeadState } from './types';
 import { getShape } from '../tv/geometry';
 import { RobotSim, restPose } from '../tv/sim';
-import { RobotRenderer, type Palette } from '../tv/render';
+import { frameFor, RobotRenderer, type Palette } from '../tv/render';
 import { linear } from '../tv/light';
 import { parseColor } from '../color';
 import { subscribe, pointer } from '../ticker';
@@ -37,7 +37,7 @@ const validShape = (value: RobotHeadShape | undefined): RobotHeadShape =>
 
 function isClickCallback(
   handler: RobotHeadProps['onClick'],
-): handler is JSX.EventHandler<HTMLCanvasElement, MouseEvent> {
+): handler is JSX.EventHandler<HTMLSpanElement, MouseEvent> {
   return typeof handler === 'function';
 }
 
@@ -64,15 +64,19 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
 
   const rest = omit(props,
     'model', 'shape', 'state', 'size', 'color', 'trimColor', 'screenColor',
-    'speed', 'paused', 'interactive', 'floorShadow', 'seed',
+    'speed', 'paused', 'interactive', 'floorShadow', 'antenna', 'seed',
     'class', 'className', 'style', 'onClick', 'aria-label', 'ref',
   );
 
+  let root!: HTMLSpanElement;
   let canvas!: HTMLCanvasElement;
   let renderer: RobotRenderer | undefined;
 
   const size = () => Number.isFinite(local.size) && (local.size ?? 0) > 0
     ? Math.max(32, Math.min(local.size!, 1024)) : 160;
+
+  const frame = createMemo(() =>
+    frameFor(getShape(validShape(local.shape)), local.antenna ?? true, size()));
 
   const speed = () => Number.isFinite(local.speed) && (local.speed ?? -1) >= 0
     ? Math.min(local.speed!, 8) : 1;
@@ -87,7 +91,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
 
   onSettled(() => {
     const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
-    observer.observe(canvas);
+    observer.observe(root);
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReduceMotion(query.matches);
     const changed = () => setReduceMotion(query.matches);
@@ -99,10 +103,10 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     };
   });
 
-  createTrackedEffect(() => {
+  createEffect(() => {
     const state = validState(local.state);
     const shape = getShape(validShape(local.shape));
-    const dimension = size();
+    const antenna = local.antenna ?? true;
 
     const colors = palette(
       local.color ?? '#2b49a3',
@@ -114,37 +118,41 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     const interactive = local.interactive ?? true;
     const floorShadow = local.floorShadow ?? true;
     const still = (local.paused ?? false) || !(rate > 0) || reduceMotion();
+
+    return { state, shape, antenna, current: frame(), colors, rate, interactive, floorShadow, still, visible: visible() };
+  }, ({ state, shape, antenna, current, colors, rate, interactive, floorShadow, still, visible: isVisible }) => {
     sim.setState(state);
 
     const paint = (animated: boolean) => {
       if (!canvas) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const pixels = Math.round(dimension * dpr);
+      const width = Math.round((current.box + 2 * current.padSide) * dpr);
+      const height = Math.round((current.box + current.padTop + current.padBottom) * dpr);
 
-      if (canvas.width !== pixels || canvas.height !== pixels) {
-        canvas.width = pixels;
-        canvas.height = pixels;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
       }
 
       const ctx = canvas.getContext('2d');
 
       if (!ctx) return;
       renderer ??= new RobotRenderer();
-      renderer.draw(ctx, pixels, animated ? sim.pose : restPose(state), animated ? sim : null,
-        state, shape, colors, { floorShadow });
+      renderer.draw(ctx, current, dpr, animated ? sim.pose : restPose(state), animated ? sim : null,
+        state, shape, colors, { floorShadow, antenna });
     };
 
-    if (still || !visible()) {
-      if (visible()) paint(false);
+    if (still || !isVisible) {
+      if (isVisible) paint(false);
 
       return;
     }
 
-      return subscribe((dt) => {
+    return subscribe((dt) => {
       if (interactive && Number.isFinite(pointer.x)) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = root.getBoundingClientRect();
         const dx = pointer.x - (rect.left + rect.width / 2);
-        const dy = pointer.y - (rect.top + rect.height * 0.56);
+        const dy = pointer.y - (rect.top + current.cy - current.padTop);
         sim.pointer = Math.hypot(dx, dy) < 700 ? { x: dx, y: dy } : null;
       } else {
         sim.pointer = null;
@@ -155,7 +163,7 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     });
   });
 
-  const handleClick: JSX.EventHandler<HTMLCanvasElement, MouseEvent> = (event) => {
+  const handleClick: JSX.EventHandler<HTMLSpanElement, MouseEvent> = (event) => {
     if ((local.interactive ?? true) && !(local.paused ?? false) && speed() > 0 && !reduceMotion()) {
       sim.poke();
     }
@@ -171,23 +179,37 @@ export function RobotHead(props: RobotHeadProps): JSX.Element {
     assignRef(local.ref, element);
   };
 
+  const setRoot = (element: HTMLSpanElement) => { root = element; };
+
   return (
-    <canvas
-      ref={setRef}
+    <span
+      ref={setRoot}
       role="img"
       aria-label={local['aria-label'] ?? `Robot, ${validState(local.state)}`}
       class={local.class ?? local.className}
       style={isStyleText(local.style)
-        ? `width:${size()}px;height:${size()}px;display:block;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
+        ? `position:relative;display:block;flex:none;width:${size()}px;height:${size()}px;cursor:${local.interactive === false ? 'auto' : 'pointer'};${local.style}`
         : {
+            position: 'relative',
             width: `${size()}px`,
             height: `${size()}px`,
             display: 'block',
+            flex: 'none',
             cursor: local.interactive === false ? undefined : 'pointer',
             ...local.style,
           }}
       onClick={handleClick}
       {...rest}
-    />
+    >
+      <canvas ref={setRef} aria-hidden="true" style={{
+        position: 'absolute',
+        left: `${-frame().padSide}px`,
+        top: `${-frame().padTop}px`,
+        width: `${frame().box + 2 * frame().padSide}px`,
+        height: `${frame().box + frame().padTop + frame().padBottom}px`,
+        display: 'block',
+        'pointer-events': 'none',
+      }} />
+    </span>
   );
 }
