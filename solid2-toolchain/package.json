@@ -7,9 +7,9 @@
     "build": "vite build && vite build --config vite.server.config.ts && cp ../src/solid2/index.d.ts ../dist/solid2.d.ts"
   },
   "devDependencies": {
-    "@solidjs/vite-plugin": "3.0.0-next.49",
-    "@solidjs/web": "2.0.0-rc.14",
-    "solid-js": "2.0.0-rc.14",
+    "@solidjs/vite-plugin": "3.0.1",
+    "@solidjs/web": "2.0.3",
+    "solid-js": "2.0.3",
     "typescript": "5.9.3",
     "vite": "8.3.4"
   }

@@ -102,8 +102,8 @@
     "e2e:consumer:built": "bun pm pack --filename test-results/consumer-solid1.tgz && bun pm pack --filename test-results/consumer-solid2.tgz && cd e2e/consumer && rm -f bun.lock && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../consumer-solid2 && rm -f bun.lock && bun install --force && bun run typecheck && bun run build && node ssr.mjs && cd ../.. && bunx playwright test --config playwright.consumer.config.ts && bunx playwright test --config playwright.consumer-solid2.config.ts"
   },
   "peerDependencies": {
-    "solid-js": "^1.9.0 || ^2.0.0-rc.14",
-    "@solidjs/web": "^2.0.0-rc.14"
+    "solid-js": "^1.9.0 || ^2.0.0",
+    "@solidjs/web": "^2.0.0"
   },
   "peerDependenciesMeta": {
     "@solidjs/web": {

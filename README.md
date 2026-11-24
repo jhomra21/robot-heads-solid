@@ -12,7 +12,7 @@ Drawn on a 2D canvas: no WebGL or runtime dependencies.
 bun add robot-heads-solid
 ```
 
-Solid 1.9+ is supported by the default entry point. Solid 2 is still a prerelease and has a separate, explicitly selected entry point: `robot-heads-solid/solid2`. Do not mix the two entry points in one application. Solid 2 apps need both `solid-js` and `@solidjs/web` at matching versions. Solid 2 support is verified against `2.0.0-rc.14`; it is opt-in prerelease support, not a claim of compatibility with a stable Solid 2 release.
+Solid 1.9+ is supported by the default entry point. Stable Solid 2 is supported through the separate `robot-heads-solid/solid2` entry point, verified against 2.0.3. Do not mix the two entry points in one application. Solid 2 apps need both `solid-js` and `@solidjs/web` at matching versions.
 
 ## Quick start
 
@@ -24,12 +24,12 @@ function Agent(props: { status: 'idle' | 'thinking' | 'speaking' }) {
 }
 ```
 
-### Solid 2 prerelease
+### Solid 2
 
-Install matching Solid 2 prerelease packages and use the separate entry point:
+Install matching Solid 2 packages and use the separate entry point:
 
 ```sh
-bun add solid-js@2.0.0-rc.14 @solidjs/web@2.0.0-rc.14 robot-heads-solid
+bun add solid-js@2 @solidjs/web@2 robot-heads-solid
 ```
 
 ```tsx
